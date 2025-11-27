@@ -408,6 +408,27 @@ ok ? `Cloud: OK ${res.status}` : `Cloud: ERR ${res.status} ${txt || ''}`;
 document.getElementById('statusRow').textContent = 'Cloud error: ' + (err?.message || err);
 }
 }
+/* ====== Ρώτα το cloud για το τελευταίο χτύπημα εργαζομένου ====== */
+async function fetchLastFromCloud(name) {
+const base = getWebhookUrl();
+if (!base) return null;
+
+const url = withToken(base, SECRET_TOKEN) + '&name=' + encodeURIComponent(name);
+
+try {
+const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+if (!res.ok) return null;
+
+const data = await res.json().catch(() => null);
+if (!data || !data.ok || !data.last) return null;
+
+// data.last = { type: "IN"/"OUT", timestamp: "...", date: "..." }
+return data.last;
+} catch (err) {
+console.warn('fetchLastFromCloud error', err);
+return null;
+}
+}
 
 const minutesBetween=(a,b)=>Math.max(0,Math.round((new Date(b)-new Date(a))/60000));
 
