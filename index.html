@@ -262,7 +262,13 @@ const DEFAULT_NAMES = [
 "ΦΩΤΗΣ ΔΗΜΗΤΡΗΣ"
 ];
 const SECRET_TOKEN = "store311_2025_secure_token_93hfuWvL8p7Zt!xA"; // ίδιο με Apps Script
-const DEVICE_TOKEN = "store311_main_tablet"; // 👈 όνομα που ταυτίζει το tablet αυτό
+// 🔐 ΜΟΝΑΔΙΚΟ DEVICE TOKEN ΑΝΑ ΣΥΣΚΕΥΗ (φτιάχνεται και αποθηκεύεται στο localStorage)
+const DEVICE_STORAGE_KEY = "store311_device_token_v1";
+let DEVICE_TOKEN = localStorage.getItem(DEVICE_STORAGE_KEY);
+if (!DEVICE_TOKEN) {
+DEVICE_TOKEN = "dev_" + Math.random().toString(36).slice(2) + "_" + Date.now();
+localStorage.setItem(DEVICE_STORAGE_KEY, DEVICE_TOKEN);
+}
 </script>
 
 <script>
