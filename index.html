@@ -430,8 +430,21 @@ return null;
 }
 }
 
-const minutesBetween=(a,b)=>Math.max(0,Math.round((new Date(b)-new Date(a))/60000));
+function minutesBetween(a, b) {
+const start = new Date(a);
+const end = new Date(b);
+if (isNaN(start) || isNaN(end)) return 0;
 
+// 🔹 Αν το IN είναι στα τελευταία 5 λεπτά πριν αλλάξει η ώρα
+// π.χ. 17:55–17:59 → το μετράμε από 18:00
+const m = start.getMinutes();
+if (m >= 55) {
+start.setHours(start.getHours() + 1, 0, 0, 0); // πάμε στην επόμενη “γεμάτη” ώρα
+}
+
+const diff = (end - start) / 60000;
+return Math.max(0, Math.round(diff));
+}
 function updateLastStatus(name){
 const la=lastActionFor(name);
 $("#lastRow").textContent = la ? `Τελευταίο χτύπημα: ${la}` : 'Τελευταίο χτύπημα: —';
