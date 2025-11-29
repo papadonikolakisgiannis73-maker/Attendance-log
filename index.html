@@ -472,17 +472,77 @@ console.warn("checkCloudOpenShift error", err);
 return { open:false };
 }
 }
-function punch(action){
+ // 🔎 Παίρνουμε από το cloud το τελευταίο χτύπημα για ένα όνομα
+async function getLastFromCloud(name) {
+const base = getWebhookUrl();
+if (!base) return null;
+
+const url = withToken(base, SECRET_TOKEN) + '&name=' + encodeURIComponent(name);
+
+try {
+const res = await fetch(url, {
+method: 'GET',
+cache: 'no-store'
+});
+
+if (!res.ok) return null;
+
+const data = await res.json().catch(() => null);
+if (!data || !data.ok || !data.last) return null;
+
+// data.last = { type:"IN"/"OUT", timestamp:"...", date:"..." }
+return data.last;
+} catch (err) {
+console.warn('getLastFromCloud error', err);
+return null;
+}
+}
+ 
+async function punch(action) {
 const name = $("#employee").value;
 if (!name || name === '—') {
 $("#statusRow").textContent = 'Διάλεξε εργαζόμενο.';
 return;
 }
 
-const last = lastActionFor(name);
 const note = $("#note").value.trim();
 
-// 🚫 ΜΠΛΟΚ ΔΙΠΛΟ IN
+// Διαβάζουμε τρέχον log (local)
+let log = getLog();
+let last = lastActionFor(name);
+
+// 🟦 FALLBACK στο cloud όταν πάμε να κάνουμε OUT και το local δεν δείχνει ενεργή βάρδια
+if (action === 'OUT' && last !== 'IN') {
+const cloudLast = await getLastFromCloud(name);
+
+if (cloudLast && String(cloudLast.type || '').toUpperCase() === 'IN') {
+// ➜ Υπάρχει ανοιχτή βάρδια στο cloud, οπότε ΦΤΙΑΧΝΟΥΜΕ ένα fake IN στο local log
+const iso = cloudLast.timestamp;
+const parts = toParts(iso); // { date, time }
+
+const restoredEntry = {
+id: 'cloud_' + Math.random().toString(36).slice(2),
+name,
+action: 'IN',
+iso,
+date: parts.date,
+time: parts.time,
+note: '(cloud restore)'
+};
+
+log.push(restoredEntry);
+setLog(log);
+last = 'IN'; // Τώρα θεωρούμε ότι υπάρχει ενεργή βάρδια
+} else {
+// Ούτε local ούτε cloud έχουν ανοιχτό IN → μπλοκάρουμε
+$("#statusRow").textContent = `${name}: Δεν υπάρχει ενεργή βάρδια για OUT.`;
+updateLastStatus(name);
+$("#note").value = '';
+return;
+}
+}
+
+// 🚫 ΜΠΛΟΚ ΔΙΠΛΟ IN (το cloud fallback δεν επηρεάζει τα IN)
 if (action === 'IN' && last === 'IN') {
 $("#statusRow").textContent = `${name}: Έχεις ήδη κάνει IN. Κάνε πρώτα OUT.`;
 updateLastStatus(name);
@@ -490,17 +550,8 @@ $("#note").value = '';
 return;
 }
 
-// 🚫 ΜΠΛΟΚ ΔΙΠΛΟ OUT / OUT ΧΩΡΙΣ ΑΝΟΙΧΤΗ ΒΑΡΔΙΑ
-if (action === 'OUT' && last !== 'IN') {
-$("#statusRow").textContent = `${name}: Δεν υπάρχει ενεργή βάρδια για OUT.`;
-updateLastStatus(name);
-$("#note").value = '';
-return;
-}
-
-// ✅ Local log
+// ✅ Local log: γράφουμε το τρέχον IN/OUT
 const entry = makeEntry(name, action, note);
-const log = getLog();
 log.push(entry);
 setLog(log);
 
