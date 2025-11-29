@@ -447,9 +447,29 @@ start.setHours(start.getHours() + 1, 0, 0, 0); // πάμε στην επόμεν
 const diff = (end - start) / 60000;
 return Math.max(0, Math.round(diff));
 }
-function updateLastStatus(name){
-const la=lastActionFor(name);
-$("#lastRow").textContent = la ? `Τελευταίο χτύπημα: ${la}` : 'Τελευταίο χτύπημα: —';
+async function updateLastStatus(name){
+if (!name || name === '—') {
+$("#lastRow").textContent = 'Τελευταίο χτύπημα: —';
+return;
+}
+
+// 1️⃣ Πρώτα κοιτάμε τοπικά (localStorage)
+const local = lastActionFor(name);
+if (local) {
+$("#lastRow").textContent = `Τελευταίο χτύπημα (από συσκευή): ${local}`;
+return;
+}
+
+// 2️⃣ Αν δεν υπάρχει στο local, ρωτάμε το cloud (Google Sheet / data)
+const cloudLast = await getLastFromCloud(name);
+if (cloudLast && cloudLast.timestamp) {
+const parts = toParts(cloudLast.timestamp); // έχουμε ήδη τη toParts πιο πάνω
+const type = String(cloudLast.type || '').toUpperCase();
+$("#lastRow").textContent =
+`Τελευταίο χτύπημα (cloud): ${type} • ${parts.date} ${parts.time}`;
+} else {
+$("#lastRow").textContent = 'Τελευταίο χτύπημα: —';
+}
 }
 /* ====== Έλεγχος από το cloud αν υπάρχει ανοιχτό IN για τον εργαζόμενο ====== */
 async function checkCloudOpenShift(name){
