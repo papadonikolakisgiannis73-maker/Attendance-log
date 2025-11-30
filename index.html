@@ -118,9 +118,43 @@ filter: brightness(0.95);
 table{ width:100%; border-collapse:collapse; margin-top:12px; font-size:14px; }
 th,td{ padding:8px; border-bottom:1px solid #eee; text-align:left; }
 
-.hint{ color:#666; font-size:13px; margin-top:6px; }
-.status{ margin-top:8px; font-size:14px; }
-footer{ color:#666; font-size:12px; text-align:center; padding:8px 0; }
+/* Ενισχυμένα μηνύματα κατάστασης (IN/OUT + πρωινή/βραδινή) */
+.status{
+margin-top:12px;
+font-size:18px;
+font-weight:700;
+text-align:center;
+padding:10px;
+border-radius:12px;
+transition: all .25s ease;
+}
+
+/* Πρωινή — πράσινο */
+.status-morning{
+background:#d9fbe4;
+border:2px solid #9ce3b4;
+color:#065f46;
+}
+
+/* Βραδινή — electric blue */
+.status-night{
+background:#d0e3ff;
+border:2px solid #3b82f6;
+color:#1e3a8a;
+}
+
+.hint{
+color:#666;
+font-size:14px;
+margin-top:6px;
+}
+
+footer{
+color:#666;
+font-size:12px;
+text-align:center;
+padding:8px 0;
+}
 
 /* Modal PIN */
 #pinModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); align-items:center; justify-content:center; }
