@@ -307,7 +307,38 @@ const load=(k,d)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):d}
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const getLog=()=>load(LOG_KEY,[]);
 const setLog=v=>save(LOG_KEY,v);
+  /* ==== Βοηθοί για πρωινή / βραδινή & status χρώματα ==== */
 
+// Παίρνει ISO και λέει αν είναι Πρωινή ή Βραδινή βάρδια
+function classifyShiftFromIso(iso) {
+if (!iso) return null;
+const d = new Date(iso);
+if (isNaN(d)) return null;
+const h = d.getHours(); // 0–23 (τοπική ώρα)
+
+// 08:00–16:59 → Πρωινή
+if (h >= 8 && h < 17) return 'morning';
+
+// 17:00–02:59 → Βραδινή
+if (h >= 17 || h < 3) return 'night';
+
+return null;
+}
+
+// Βάζει το μήνυμα στο statusRow και εφαρμόζει το κατάλληλο class
+function applyStatus(message, shiftType) {
+const el = document.getElementById('statusRow');
+if (!el) return;
+el.textContent = message;
+el.classList.remove('status-morning', 'status-night');
+
+if (shiftType === 'morning') {
+el.classList.add('status-morning');
+} else if (shiftType === 'night') {
+el.classList.add('status-night');
+}
+}
+ 
 /* Ρυθμίσεις με fallback στα DEFAULT_NAMES + default τιμές */
 const settings = () => {
 const base = {
@@ -600,10 +631,14 @@ const entry = makeEntry(name, action, note);
 log.push(entry);
 setLog(log);
 
-$("#statusRow").textContent =
-`${name} • ${action} • ${entry.date} ${entry.time}${note ? ` • ${note}` : ''}`;
-updateLastStatus(name);
+// μήνυμα + είδος βάρδιας
+const msg =
+`${name} • ${action} • ${entry.date} ${entry.time}` +
+(note ? ` • ${note}` : '');
+const shiftType = classifyShiftFromIso(entry.iso); // 'morning' ή 'night' ή null
 
+applyStatus(msg, shiftType);
+updateLastStatus(name);
 // 🔵 ΣΤΕΛΝΟΥΜΕ ΚΑΙ ΤΑ IN ΣΤΟ CLOUD
 if (action === 'IN') {
 sendWebhookIfAny({
