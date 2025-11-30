@@ -645,7 +645,7 @@ setLog(log);
 last = 'IN'; // Τώρα θεωρούμε ότι υπάρχει ενεργή βάρδια
 } else {
 // Ούτε local ούτε cloud έχουν ανοιχτό IN → μπλοκάρουμε
-$("#statusRow").textContent = `${name}: Δεν υπάρχει ενεργή βάρδια για OUT.`;
+applyStatus(`${name}: Δεν υπάρχει ενεργή βάρδια για OUT.`, null);
 updateLastStatus(name);
 $("#note").value = '';
 return;
@@ -654,7 +654,7 @@ return;
 
 // 🚫 ΜΠΛΟΚ ΔΙΠΛΟ IN (το cloud fallback δεν επηρεάζει τα IN)
 if (action === 'IN' && last === 'IN') {
-$("#statusRow").textContent = `${name}: Έχεις ήδη κάνει IN. Κάνε πρώτα OUT.`;
+applyStatus(`⚠ ${name}: Έχεις ήδη κάνει IN. Κάνε πρώτα OUT.`, null);
 updateLastStatus(name);
 $("#note").value = '';
 return;
