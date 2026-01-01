@@ -161,6 +161,20 @@ padding:8px 0;
 #pinBox{ background:#fff; padding:18px; border-radius:12px; width:320px; box-shadow:0 10px 30px rgba(0,0,0,.2); }
 #pinBox h3{ margin:0 0 8px 0; font-size:18px; }
 #pinMsg{ color:#b42318; font-size:13px; margin-top:8px; }
+ /* ===== EMPLOYEE DROPDOWN – TABLET SAFE ===== */
+#employee {
+font-size: 26px;
+font-weight: 800;
+height: 68px;
+}
+
+#employee option {
+font-size: 24px;
+font-weight: 700;
+padding: 14px 10px;
+line-height: 1.5;
+text-transform: uppercase;
+} 
 </style>
 </head>
 
@@ -856,6 +870,21 @@ tbody.appendChild(tr);
 });
 
 /* ====== Bootstrap ====== */
+ <script>
+function sortEmployeeSelect() {
+const select = document.getElementById('employee');
+if (!select) return;
+
+const options = Array.from(select.options);
+
+options.sort((a, b) =>
+a.text.localeCompare(b.text, 'el', { sensitivity: 'base' })
+);
+
+select.innerHTML = '';
+options.forEach(o => select.appendChild(o));
+}
+</script> 
 (function init(){
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('./sw.js').catch(()=>{});
@@ -867,6 +896,7 @@ saveSettingsObj({ names: DEFAULT_NAMES, webhook: "", shiftStart: "08:00", grace:
 }
 
 refreshEmployees();
+sortEmployeeSelect();
 updateLastStatus($("#employee").value);
 
 // 🔗 ΣΥΝΔΕΣΗ ΚΟΥΜΠΙΩΝ ΜΕ ΤΗΝ punch()
