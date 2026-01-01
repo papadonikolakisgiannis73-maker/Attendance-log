@@ -870,21 +870,6 @@ tbody.appendChild(tr);
 });
 
 /* ====== Bootstrap ====== */
- <script>
-function sortEmployeeSelect() {
-const select = document.getElementById('employee');
-if (!select) return;
-
-const options = Array.from(select.options);
-
-options.sort((a, b) =>
-a.text.localeCompare(b.text, 'el', { sensitivity: 'base' })
-);
-
-select.innerHTML = '';
-options.forEach(o => select.appendChild(o));
-}
-</script> 
 (function init(){
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('./sw.js').catch(()=>{});
