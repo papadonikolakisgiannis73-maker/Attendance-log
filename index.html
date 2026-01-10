@@ -550,42 +550,46 @@ start.setHours(start.getHours() + 1, 0, 0, 0); // πάμε στην επόμεν
 const diff = (end - start) / 60000;
 return Math.max(0, Math.round(diff));
 }
+function getBusinessDayBounds(now = new Date()) {
+const cutoffHour = 4; // 04:00
+const start = new Date(now);
+if (start.getHours() < cutoffHour) {
+start.setDate(start.getDate() - 1);
+}
+start.setHours(cutoffHour, 0, 0, 0);
 
+const end = new Date(start);
+end.setDate(end.getDate() + 1);
+
+return { start, end };
+}
 // 🔢 Υπολογίζει πόσα λεπτά έχει δουλέψει ΣΗΜΕΡΑ ένα άτομο (από το local log)
 function getTodayMinutesFor(name) {
 const all = getLog().filter(r => r.name === name);
 if (!all.length) return 0;
 
-const now = new Date();
-const y = now.getFullYear();
-const m = now.getMonth();
-const d = now.getDate();
+const { start, end } = getBusinessDayBounds(new Date());
 
-const startOfDay = new Date(y, m, d, 0, 0, 0, 0);
-const endOfDay = new Date(y, m, d + 1, 0, 0, 0, 0);
-
-const todays = all
-.filter(r => {
+const todays = all.filter(r => {
 const t = new Date(r.iso);
-return t >= startOfDay && t < endOfDay;
-})
-.sort((a, b) => a.iso.localeCompare(b.iso));
+return t >= start && t < end;
+});
 
-let total = 0;
+let minutes = 0;
+let lastIn = null;
 
-for (let i = 0; i < todays.length; i++) {
-const row = todays[i];
-if (row.action === 'IN') {
-const outIdx = todays.slice(i + 1).findIndex(x => x.action === 'OUT');
-if (outIdx > -1) {
-const outRow = todays[i + 1 + outIdx];
-total += minutesBetween(row.iso, outRow.iso);
-i = i + outIdx;
+todays.forEach(r => {
+if (r.type === 'IN') {
+lastIn = new Date(r.iso);
+} else if (r.type === 'OUT' && lastIn) {
+let out = new Date(r.iso);
+if (out < lastIn) out.setDate(out.getDate() + 1); // μεσάνυχτα
+minutes += Math.max(0, Math.round((out - lastIn) / 60000));
+lastIn = null;
 }
-}
-}
+});
 
-return total;
+return minutes;
 }
 
 // 🕒 Format "Χ ώρες και Υ λεπτά"
