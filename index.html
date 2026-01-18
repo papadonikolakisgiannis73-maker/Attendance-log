@@ -797,18 +797,24 @@ note
 });
 }
 
-// 🔹 Μετά το OUT: δείξε ΣΥΝΟΛΟ σημερινής μέρας
-const todayMins = getTodayMinutesFor(name);
-const todayText = formatHoursMinutes(todayMins);
+// Μετά το OUT: δείξε ΣΥΝΟΛΟ από server
+if (action === 'OUT') {
+const data = await sendWebhookIfAny({
+type: 'session',
+name,
+start: lastIn.iso,
+end: entry.iso,
+minutes: mins,
+date: entry.date,
+note
+});
 
-applyStatus(
-`${name}: Σήμερα έχεις δουλέψει ${todayText}.`,
-shiftType // ξαναχρησιμοποιούμε το ίδιο shiftType
-);
+if (data && typeof data.todayMinutes === 'number') {
+const todayText = formatHoursMinutes(data.todayMinutes);
+applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
+} else {
+applyStatus(`${name}: Η έξοδος καταγράφηκε.`, shiftType);
 }
-
-// καθάρισμα σημείωσης
-$("#note").value = '';
 }
 
 /* ====== History ====== */
