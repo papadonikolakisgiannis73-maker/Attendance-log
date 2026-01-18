@@ -487,25 +487,33 @@ return url + sep + 'deviceToken=' + encodeURIComponent(deviceToken);
 }
 async function sendWebhookIfAny(payload){
 let base = getWebhookUrl();
-if(!base){ document.getElementById('statusRow').textContent = 'Cloud: no URL set'; return; }
+if(!base){
+document.getElementById('statusRow').textContent = 'Cloud: no URL set';
+return;
+}
 
 let url = withToken(base, SECRET_TOKEN);
-url = withDevice(url, DEVICE_TOKEN); // 👈 ΠΡΟΣΘΕΣΑΜΕ ΑΥΤΟ
+url = withDevice(url, DEVICE_TOKEN);
+
+// ⬇⬇⬇ FIX: υπολογίζουμε shiftType ΕΔΩ
+const shiftType = classifyShiftFromIso(payload.iso || payload.start || null);
+
 try {
 const ctrl = new AbortController();
-const t = setTimeout(()=>ctrl.abort(), 10000); // 10s timeout
+const t = setTimeout(()=>ctrl.abort(), 10000);
+
 const res = await fetch(url, {
 method: 'POST',
-headers: { 'Content-Type': 'text/plain' }, // αποφεύγουμε preflight/CORS
+headers: { 'Content-Type': 'text/plain' },
 body: JSON.stringify(payload),
 cache: 'no-store',
 redirect: 'follow',
 signal: ctrl.signal
 });
+
 clearTimeout(t);
 
 const data = await res.json().catch(() => null);
-
 const ok = res.ok && data && data.ok === true;
 
 document.getElementById('statusRow').textContent =
@@ -513,14 +521,17 @@ ok ? `Cloud: OK ${res.status}` : `Cloud: ERR ${res.status}`;
 
 if (ok && typeof data.todayMinutes === 'number') {
 const todayText = formatHoursMinutes(data.todayMinutes);
-applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
+applyStatus(`${payload.name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
 } else if (ok) {
-applyStatus(`${name}: Η έξοδος καταγράφηκε.`, shiftType);
+applyStatus(`${payload.name}: Η έξοδος καταγράφηκε.`, shiftType);
 }
+
 } catch (err) {
-document.getElementById('statusRow').textContent = 'Cloud error: ' + (err?.message || err);
+document.getElementById('statusRow').textContent =
+'Cloud error: ' + (err?.message || err);
 }
 }
+
 /* ====== Ρώτα το cloud για το τελευταίο χτύπημα εργαζομένου ====== */
 async function fetchLastFromCloud(name) {
 const base = getWebhookUrl();
