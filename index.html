@@ -485,49 +485,42 @@ if(!deviceToken) return url;
 const sep = url.includes('?') ? '&' : '?';
 return url + sep + 'deviceToken=' + encodeURIComponent(deviceToken);
 }
-async function sendWebhookIfAny(payload, personName, shiftType) {
+async function sendWebhookIfAny(payload){
 let base = getWebhookUrl();
-if (!base) {
-document.getElementById('statusRow').textContent = 'Cloud: no URL set';
-return;
-}
+if(!base){ document.getElementById('statusRow').textContent = 'Cloud: no URL set'; return; }
 
 let url = withToken(base, SECRET_TOKEN);
-url = withDevice(url, DEVICE_TOKEN);
-
+url = withDevice(url, DEVICE_TOKEN); // 👈 ΠΡΟΣΘΕΣΑΜΕ ΑΥΤΟ
 try {
 const ctrl = new AbortController();
-const t = setTimeout(() => ctrl.abort(), 10000);
-
+const t = setTimeout(()=>ctrl.abort(), 10000); // 10s timeout
 const res = await fetch(url, {
 method: 'POST',
-headers: { 'Content-Type': 'text/plain' }, // no preflight
+headers: { 'Content-Type': 'text/plain' }, // αποφεύγουμε preflight/CORS
 body: JSON.stringify(payload),
 cache: 'no-store',
 redirect: 'follow',
 signal: ctrl.signal
 });
-
 clearTimeout(t);
 
 const data = await res.json().catch(() => null);
+
 const ok = res.ok && data && data.ok === true;
 
-// ΜΗΝ ξαναγράφεις statusRow εδώ με άσχετο κείμενο, άσε το applyStatus να κάνει τη δουλειά
+document.getElementById('statusRow').textContent =
+ok ? `Cloud: OK ${res.status}` : `Cloud: ERR ${res.status}`;
+
 if (ok && typeof data.todayMinutes === 'number') {
 const todayText = formatHoursMinutes(data.todayMinutes);
-applyStatus(`${personName}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
+applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
 } else if (ok) {
-applyStatus(`${personName}: Καταγράφηκε στο cloud.`, shiftType);
-} else {
-document.getElementById('statusRow').textContent = `Cloud: ERR ${res.status}`;
+applyStatus(`${name}: Η έξοδος καταγράφηκε.`, shiftType);
 }
-
 } catch (err) {
 document.getElementById('statusRow').textContent = 'Cloud error: ' + (err?.message || err);
 }
 }
-
 /* ====== Ρώτα το cloud για το τελευταίο χτύπημα εργαζομένου ====== */
 async function fetchLastFromCloud(name) {
 const base = getWebhookUrl();
@@ -747,41 +740,42 @@ const entry = makeEntry(name, action, note);
 log.push(entry);
 setLog(log);
 
-// Υπολογισμός shiftType ΜΙΑ ΦΟΡΑ
+// 🔹 Υπολογισμός βάρδιας (πρωινή / βραδινή)
 const shiftType = classifyShiftFromIso(entry.iso);
 
-// Μήνυμα UI
-let msg = action === 'IN'
-? `${name}: IN καταχωρήθηκε • ${entry.date} ${entry.time}`
-: `${name}: OUT καταχωρήθηκε • ${entry.date} ${entry.time}`;
+// 🔹 Μήνυμα προς εμφάνιση (απλό IN / OUT)
+let msg;
+if (action === 'IN') {
+msg = `${name}: IN καταχωρήθηκε • ${entry.date} ${entry.time}`;
+} else {
+msg = `${name}: OUT καταχωρήθηκε • ${entry.date} ${entry.time}`;
+}
 
+// 🔹 Εμφάνιση μηνύματος + σωστό χρώμα
 applyStatus(msg, shiftType);
 updateLastStatus(name);
 
-// ➜ SEND TO CLOUD
+// 🔵 ΣΤΕΛΝΟΥΜΕ ΚΑΙ ΤΑ IN ΣΤΟ CLOUD
 if (action === 'IN') {
-sendWebhookIfAny(
-{
+sendWebhookIfAny({
 type: 'in',
 name,
-iso: entry.iso,
-date: entry.date,
+iso: entry.iso, // πλήρες timestamp ISO
+date: entry.date, // ημερομηνία "dd/mm/yyyy"
 note
-},
-name,
-shiftType
-);
+});
 }
 
+// 🔵 OUT → session με λεπτά
 if (action === 'OUT') {
-const rows = log.filter(x => x.name === name);
-const lastIn = [...rows].reverse().find(x => x.action === 'IN');
+const rows = log
+.filter(x => x.name === name)
+.sort((a, b) => a.iso.localeCompare(b.iso));
 
+const lastIn = [...rows].reverse().find(x => x.action === 'IN');
 if (lastIn) {
 const mins = minutesBetween(lastIn.iso, entry.iso);
-
-sendWebhookIfAny(
-{
+sendWebhookIfAny({
 type: 'session',
 name,
 start: lastIn.iso,
@@ -789,23 +783,22 @@ end: entry.iso,
 minutes: mins,
 date: entry.date,
 note
-},
-name,
-shiftType
-);
+});
 }
 
-// ΜΟΝΟ μετά το OUT δείχνουμε σύνολο
+// 🔹 Μετά το OUT: δείξε ΣΥΝΟΛΟ σημερινής μέρας
 const todayMins = getTodayMinutesFor(name);
 const todayText = formatHoursMinutes(todayMins);
+
 applyStatus(
 `${name}: Σήμερα έχεις δουλέψει ${todayText}.`,
-shiftType
+shiftType // ξαναχρησιμοποιούμε το ίδιο shiftType
 );
 }
 
+// καθάρισμα σημείωσης
 $("#note").value = '';
-
+}
 
 /* ====== History ====== */
 function renderLog(){
