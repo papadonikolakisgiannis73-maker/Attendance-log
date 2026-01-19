@@ -747,41 +747,41 @@ const entry = makeEntry(name, action, note);
 log.push(entry);
 setLog(log);
 
-// 🔹 Υπολογισμός βάρδιας (πρωινή / βραδινή)
+// Υπολογισμός shiftType ΜΙΑ ΦΟΡΑ
 const shiftType = classifyShiftFromIso(entry.iso);
 
-// 🔹 Μήνυμα προς εμφάνιση (απλό IN / OUT)
-let msg;
-if (action === 'IN') {
-msg = `${name}: IN καταχωρήθηκε • ${entry.date} ${entry.time}`;
-} else {
-msg = `${name}: OUT καταχωρήθηκε • ${entry.date} ${entry.time}`;
-}
+// Μήνυμα UI
+let msg = action === 'IN'
+? `${name}: IN καταχωρήθηκε • ${entry.date} ${entry.time}`
+: `${name}: OUT καταχωρήθηκε • ${entry.date} ${entry.time}`;
 
-// 🔹 Εμφάνιση μηνύματος + σωστό χρώμα
 applyStatus(msg, shiftType);
 updateLastStatus(name);
 
-// 🔵 ΣΤΕΛΝΟΥΜΕ ΚΑΙ ΤΑ IN ΣΤΟ CLOUD
+// ➜ SEND TO CLOUD
 if (action === 'IN') {
-sendWebhookIfAny({
+sendWebhookIfAny(
+{
 type: 'in',
 name,
 iso: entry.iso,
 date: entry.date,
 note
-}, name, shiftType);
-});
+},
+name,
+shiftType
+);
 }
 
-// 🔵 OUT → session με λεπτά
 if (action === 'OUT') {
-const lastIn = [...rows].reverse().find(x => x.type === 'IN');
+const rows = log.filter(x => x.name === name);
+const lastIn = [...rows].reverse().find(x => x.action === 'IN');
 
 if (lastIn) {
 const mins = minutesBetween(lastIn.iso, entry.iso);
 
-sendWebhookIfAny({
+sendWebhookIfAny(
+{
 type: 'session',
 name,
 start: lastIn.iso,
@@ -789,23 +789,23 @@ end: entry.iso,
 minutes: mins,
 date: entry.date,
 note
-}, name, shiftType);
-});
-}
-
-// 🔹 Μετά το OUT: δείξε ΣΥΝΟΛΟ σημερινής μέρας
-const todayMins = getTodayMinutesFor(name);
-const todayText = formatHoursMinutes(todayMins);
-
-applyStatus(
-`${name}: Σήμερα έχεις δουλέψει ${todayText}.`,
-shiftType // ξαναχρησιμοποιούμε το ίδιο shiftType
+},
+name,
+shiftType
 );
 }
 
-// καθάρισμα σημείωσης
-$("#note").value = '';
+// ΜΟΝΟ μετά το OUT δείχνουμε σύνολο
+const todayMins = getTodayMinutesFor(name);
+const todayText = formatHoursMinutes(todayMins);
+applyStatus(
+`${name}: Σήμερα έχεις δουλέψει ${todayText}.`,
+shiftType
+);
 }
+
+$("#note").value = '';
+
 
 /* ====== History ====== */
 function renderLog(){
