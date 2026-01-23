@@ -696,21 +696,16 @@ return;
 }
 
 const note = $("#note").value.trim();
-
-// Διαβάζουμε τρέχον log (local)
 let log = getLog();
 let last = lastActionFor(name);
 
-// 🟦 FALLBACK στο cloud όταν πάμε να κάνουμε OUT και το local δεν δείχνει ενεργή βάρδια
+// Fallback στο cloud αν πάμε για OUT χωρίς local IN
 if (action === 'OUT' && last !== 'IN') {
 const cloudLast = await getLastFromCloud(name);
-
-if (cloudLast && String(cloudLast.type || '').toUpperCase() === 'IN') {
-// ➜ Υπάρχει ανοιχτή βάρδια στο cloud, οπότε ΦΤΙΑΧΝΟΥΜΕ ένα fake IN στο local log
+if (cloudLast && String(cloudLast.type).toUpperCase() === 'IN') {
 const iso = cloudLast.timestamp;
-const parts = toParts(iso); // { date, time }
-
-const restoredEntry = {
+const parts = toParts(iso);
+log.push({
 id: 'cloud_' + Math.random().toString(36).slice(2),
 name,
 action: 'IN',
@@ -718,13 +713,10 @@ iso,
 date: parts.date,
 time: parts.time,
 note: '(cloud restore)'
-};
-
-log.push(restoredEntry);
+});
 setLog(log);
-last = 'IN'; // Τώρα θεωρούμε ότι υπάρχει ενεργή βάρδια
+last = 'IN';
 } else {
-// Ούτε local ούτε cloud έχουν ανοιχτό IN → μπλοκάρουμε
 applyStatus(`${name}: Δεν υπάρχει ενεργή βάρδια για OUT.`, null);
 updateLastStatus(name);
 $("#note").value = '';
@@ -732,49 +724,42 @@ return;
 }
 }
 
-// 🚫 ΜΠΛΟΚ ΔΙΠΛΟ IN (το cloud fallback δεν επηρεάζει τα IN)
+// Μπλοκ διπλό IN
 if (action === 'IN' && last === 'IN') {
-applyStatus(`⚠ ${name}: Έχεις ήδη κάνει IN. Κάνε πρώτα OUT.`, null);
+applyStatus(`⚠ ${name}: Έχεις ήδη κάνει IN.`, null);
 updateLastStatus(name);
 $("#note").value = '';
 return;
 }
 
-// ✅ Local log: γράφουμε το τρέχον IN/OUT
+// Καταγραφή τοπικά
 const entry = makeEntry(name, action, note);
 log.push(entry);
 setLog(log);
 
-// 🔹 Υπολογισμός βάρδιας (πρωινή / βραδινή)
-const shiftType = classifyShiftFromIso(entry.iso);
+// ✅ ΟΡΙΖΕΤΑΙ ΜΙΑ ΦΟΡΑ
+const shiftType = classifyShiftFromIso(entry.iso) || null;
 
-// 🔹 Μήνυμα προς εμφάνιση (απλό IN / OUT)
-let msg;
-if (action === 'IN') {
-msg = `${name}: IN καταχωρήθηκε • ${entry.date} ${entry.time}`;
-} else {
-msg = `${name}: OUT καταχωρήθηκε • ${entry.date} ${entry.time}`;
-}
+// Μήνυμα
+const msg = action === 'IN'
+? `${name}: IN καταχωρήθηκε • ${entry.date} ${entry.time}`
+: `${name}: OUT καταχωρήθηκε • ${entry.date} ${entry.time}`;
 
-// 🔹 Εμφάνιση μηνύματος + σωστό χρώμα
 applyStatus(msg, shiftType);
 updateLastStatus(name);
 
-// 🔵 ΣΤΕΛΝΟΥΜΕ ΚΑΙ ΤΑ IN ΣΤΟ CLOUD
+// Στέλνουμε IN στο cloud
 if (action === 'IN') {
 sendWebhookIfAny({
 type: 'in',
 name,
-iso: entry.iso, // πλήρες timestamp ISO
-date: entry.date, // ημερομηνία "dd/mm/yyyy"
+iso: entry.iso,
+date: entry.date,
 note
 });
 }
 
-// Υπολογισμός βάρδιας (πρωινή / βραδινή) — ΜΙΑ ΦΟΡΑ
-const shiftType = classifyShiftFromIso(entry.iso) || null;
-
-// OUT → session με λεπτά
+// OUT → session
 if (action === 'OUT') {
 const rows = log
 .filter(x => x.name === name)
@@ -784,7 +769,6 @@ const lastIn = [...rows].reverse().find(x => x.action === 'IN');
 
 if (lastIn) {
 const mins = minutesBetween(lastIn.iso, entry.iso);
-
 await sendWebhookIfAny({
 type: 'session',
 name,
@@ -796,20 +780,14 @@ note
 });
 }
 
-// Μετά το OUT: δείξε ΣΥΝΟΛΟ σημερινής μέρας (local, safe)
 const todayMins = getTodayMinutesFor(name);
 const todayText = formatHoursMinutes(todayMins);
-
-applyStatus(
-`${name}: Σήμερα έχεις δουλέψει ${todayText}.`,
-shiftType
-);
+applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
 }
 
-
-// καθάρισμα σημείωσης
 $("#note").value = '';
 }
+
 
 /* ====== History ====== */
 function renderLog(){
