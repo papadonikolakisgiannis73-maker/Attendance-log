@@ -383,6 +383,7 @@ const m = mins % 60;
 if (h > 0 && m > 0) return `${h} ώρες και ${m} λεπτά`;
 if (h > 0) return `${h} ώρες`;
 return `${m} λεπτά`;
+ console.log(getLog()); 
 }
 function getTodayMinutesFor(name) {
 if (!name) return 0;
