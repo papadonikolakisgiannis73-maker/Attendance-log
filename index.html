@@ -827,11 +827,9 @@ note
 });
 }
 
-const todayMins = getTodayMinutesFor(name);
-const todayText = formatHoursMinutes(todayMins);
+// mins = λεπτά του session που μόλις έκλεισε
+const todayText = formatHoursMinutes(mins);
 applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
-}
-
 $("#note").value = '';
 }
 
