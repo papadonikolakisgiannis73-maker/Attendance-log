@@ -374,34 +374,6 @@ el.classList.add('status-night');
 }
  /* ==== Βοηθοί για υπολογισμό σημερινών λεπτών ==== */
 
-// Μετατροπή λεπτών → "Χ ώρες Υ λεπτά"
-function formatHoursMinutes(mins) {
-if (!mins || mins <= 0) return "0 ώρες";
-const h = Math.floor(mins / 60);
-const m = mins % 60;
-
-if (h > 0 && m > 0) return `${h} ώρες και ${m} λεπτά`;
-if (h > 0) return `${h} ώρες`;
-return `${m} λεπτά`;
- console.log(getLog()); 
-}
-function getTodayMinutesFor(name) {
-if (!name) return 0;
-
-const log = getLog()
-.filter(x => x.name === name)
-.sort((a, b) => a.iso.localeCompare(b.iso));
-
-const todayYMD = new Date().toISOString().slice(0, 10);
-
-let totalMinutes = 0;
-let openIn = null;
-
-for (const row of log) {
-const action = String(row.action || row.type || '')
-.trim()
-.toUpperCase();
-
 if (action === 'IN') {
 openIn = row;
 continue;
