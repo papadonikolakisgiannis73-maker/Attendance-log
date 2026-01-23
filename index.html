@@ -625,45 +625,43 @@ return { start, end };
 }
 // 🔢 Υπολογίζει πόσα λεπτά έχει δουλέψει ΣΗΜΕΡΑ ένα άτομο (από το local log)
 function getTodayMinutesFor(name) {
+if (!name) return 0;
+
 const all = getLog().filter(r => r.name === name);
 if (!all.length) return 0;
 
 const { start, end } = getBusinessDayBounds(new Date());
 
-const todays = all.filter(r => {
+const todays = all
+.filter(r => {
 const t = new Date(r.iso);
-return t >= start && t < end;
-});
+return !isNaN(t) && t >= start && t < end;
+})
+.sort((a, b) => a.iso.localeCompare(b.iso));
 
 let minutes = 0;
 let lastIn = null;
 
-todays.forEach(r => {
-if (r.type === 'IN') {
+for (const r of todays) {
+const act = String(r.action || '').trim().toUpperCase();
+
+if (act === 'IN') {
 lastIn = new Date(r.iso);
-} else if (r.type === 'OUT' && lastIn) {
+continue;
+}
+
+if (act === 'OUT' && lastIn) {
 let out = new Date(r.iso);
-if (out < lastIn) out.setDate(out.getDate() + 1); // μεσάνυχτα
+if (out < lastIn) out.setDate(out.getDate() + 1);
 minutes += Math.max(0, Math.round((out - lastIn) / 60000));
 lastIn = null;
 }
-});
+}
 
 return minutes;
 }
 
-// 🕒 Format "Χ ώρες και Υ λεπτά"
-function formatHoursMinutes(mins) {
-mins = Math.max(0, Math.round(mins));
-const h = Math.floor(mins / 60);
-const m = mins % 60;
-
-if (mins <= 0) return '0 ώρες';
-if (h > 0 && m === 0) return `${h} ώρες`;
-if (h > 0 && m > 0) return `${h} ώρες και ${m} λεπτά`;
-return `${m} λεπτά`;
 }
-
 async function updateLastStatus(name){
 if (!name || name === '—') {
 $("#lastRow").textContent = 'Τελευταίο χτύπημα: —';
@@ -814,8 +812,11 @@ const rows = log
 
 const lastIn = [...rows].reverse().find(x => x.action === 'IN');
 
+let mins = 0;
+
 if (lastIn) {
-const mins = minutesBetween(lastIn.iso, entry.iso);
+mins = minutesBetween(lastIn.iso, entry.iso);
+
 await sendWebhookIfAny({
 type: 'session',
 name,
@@ -827,8 +828,8 @@ note
 });
 }
 
-// mins = λεπτά του session που μόλις έκλεισε
-const todayText = formatHoursMinutes(mins);
+const todayMins = getTodayMinutesFor(name);
+const todayText = formatHoursMinutes(todayMins);
 applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
 $("#note").value = '';
 }
