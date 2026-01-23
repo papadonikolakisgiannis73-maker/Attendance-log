@@ -391,28 +391,33 @@ const log = getLog()
 .filter(x => x.name === name)
 .sort((a, b) => a.iso.localeCompare(b.iso));
 
-if (!log.length) return 0;
-
-const now = new Date();
-const todayYMD = now.toISOString().slice(0, 10);
+const todayYMD = new Date().toISOString().slice(0, 10);
 
 let totalMinutes = 0;
 let openIn = null;
 
 for (const row of log) {
-if (row.action === 'IN') {
+const action = String(row.action || row.type || '')
+.trim()
+.toUpperCase();
+
+if (action === 'IN') {
 openIn = row;
 continue;
 }
 
-if (row.action === 'OUT' && openIn) {
+if (action === 'OUT' && openIn) {
 const start = new Date(openIn.iso);
 const end = new Date(row.iso);
+
+if (isNaN(start) || isNaN(end)) {
+openIn = null;
+continue;
+}
 
 const startDay = start.toISOString().slice(0, 10);
 const endDay = end.toISOString().slice(0, 10);
 
-// Μετράει αν το session ακουμπάει τη σημερινή μέρα
 if (startDay === todayYMD || endDay === todayYMD) {
 const mins = Math.round((end - start) / 60000);
 if (mins > 0) totalMinutes += mins;
@@ -424,6 +429,7 @@ openIn = null;
 
 return totalMinutes;
 }
+
 
 /* Ρυθμίσεις με fallback στα DEFAULT_NAMES + default τιμές */
 const settings = () => {
