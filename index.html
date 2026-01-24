@@ -374,34 +374,6 @@ el.classList.add('status-night');
 }
  /* ==== Βοηθοί για υπολογισμό σημερινών λεπτών ==== */
 
-if (action === 'IN') {
-openIn = row;
-continue;
-}
-
-if (action === 'OUT' && openIn) {
-const start = new Date(openIn.iso);
-const end = new Date(row.iso);
-
-if (isNaN(start) || isNaN(end)) {
-openIn = null;
-continue;
-}
-
-const startDay = start.toISOString().slice(0, 10);
-const endDay = end.toISOString().slice(0, 10);
-
-if (startDay === todayYMD || endDay === todayYMD) {
-const mins = Math.round((end - start) / 60000);
-if (mins > 0) totalMinutes += mins;
-}
-
-openIn = null;
-}
-}
-
-return totalMinutes;
-}
 
 
 /* Ρυθμίσεις με fallback στα DEFAULT_NAMES + default τιμές */
