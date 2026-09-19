@@ -1,5 +1,5 @@
 // sw.js — Store311 Attendance service worker
-const CACHE = 'store311-v8';
+const CACHE = 'store311-v10';
 
 // Προ-αποθήκευση μόνο του app shell (όχι logo.png για να μην μένει παλιό)
 const PRECACHE = [
