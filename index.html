@@ -433,7 +433,10 @@ async function sendWebhookIfAny(payload) {
     const data = await res.json().catch(() => null);
     const ok = res.ok && data && data.ok === true;
     if (ok) {
-      document.getElementById('statusRow').textContent = `Cloud: OK`;
+      const where = (data.sheet && data.row)
+        ? ` → ${data.sheet} / ${data.tab || 'data'} γραμμή ${data.row}`
+        : '';
+      document.getElementById('statusRow').textContent = `Cloud: OK${where}`;
     } else {
       const errMsg = (data && data.error) ? data.error : ('HTTP ' + res.status);
       document.getElementById('statusRow').textContent = `Cloud: ERR ${errMsg}`;
