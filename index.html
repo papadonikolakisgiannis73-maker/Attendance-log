@@ -210,7 +210,7 @@ footer { color:#666; font-size:12px; text-align:center; padding:8px 0; }
 /* ===== DEFAULT CLOUD SETTINGS ===== */
 const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzn_GS0TaSCaxgeJ0HN5CmTu5V2JStWsF6pha8V4dQhuCvdro9J0o7o4R-Y7HDC1hdX/exec";
 const DEFAULT_NAMES = ["ΓΡΙΒΑ ΒΑΣΙΛΙΚΗ","ΤΟΡΙ ΙΩΑΝΝΑ","ΝΤΟΥΝΗ ΔΗΜΗΤΡΑ","ΓΙΑΝΝΑΚΟΠΟΥΛΟΣ ΔΗΜΗΤΡΗΣ","ΜΥΣΤΕΚΙΑ ΕΜΜΑΝΟΥΕΛ","ΔΙΑΜΑΝΤΟΠΟΥΛΟΣ ΓΙΩΡΓΟΣ","ΧΑΡΙΝΟΣ ΝΙΚΟΣ","BERISHA DANIEL","ΚΑΝΑΚΑΚΗΣ ΓΙΑΝΝΗΣ","ΔΗΜΟ ΑΓΓΕΛΙΚΗ","ΒΛΑΒΙΑΝΟΣ ΓΙΩΡΓΟΣ","ΤΡΑΙΑΝΟΣ ΑΛΕΞΑΝΔΡΟΣ","ΠΑΠΑΝΤΩΝΗΣ ΓΙΩΡΓΟΣ","ΚΑΡΒΕΛΗ ΑΛΕΞΑΝΔΡΑ","ΚΟΖΑΝΙΔΗΣ ΠΑΡΗΣ","ΔΡΟΥΔΑΚΗΣ ΑΝΤΩΝΗΣ","ΣΤΑΥΡΟΥΛΑΚΗ ΦΩΤΕΙΝΗ","ΠΑΡΑΣΥΡΗ ΑΡΓΥΡΩ","ΔΙΑΚΟΥΜΗ ΜΑΡΙΝΑ","ΚΑΤΣΑΛΗΣ ΣΤΑΥΡΟΣ","ΠΑΠΑΔΑΚΗΣ ΚΩΣΤΑΣ","ΘΕΟΔΩΡΑΚΗΣ ΠΑΝΑΓΙΩΤΗΣ","ΔΙΑΚΑΚΗ ΚΑΤΕΡΙΝΑ","ΓΕΩΡΓΙΤΣΗΣ ΑΝΤΡΕΑΣ","ΣΤΑΜΑΤΑΚΗ ΣΤΕΛΛΑ","ΚΑΡΤΑΛΗΣ ΣΤΑΥΡΟΣ","ΜΟΥΜΟΥΡΗΣ ΑΛΕΞΑΝΔΡΟΣ","ΚΥΡΙΑΚΟΥΛΗΣ ΠΕΤΡΟΣ","ΚΟΥΡΙΔΑΚΗΣ ΚΩΣΤΑΣ","ΚΛΑΔΟΣ ΑΝΤΩΝΗΣ","ΠΑΠΑΔΟΝΙΚΟΛΑΚΗΣ ΓΙΑΝΝΗΣ","ΚΟΥΝΔΟΥΡΑΚΗΣ ΚΥΡΙΑΚΟΣ","ΚΩΝΣΤΑΝΤΟΠΟΥΛΟΣ ΑΝΑΣΤΑΣΗΣ","ΣΤΡΟΓΓΥΛΟΥ ΕΛΣΑ","ΑΡΟΥΤΟΥΝΙΑΝ ΣΟΦΙΑ","ΜΥΞΟΛΟΥΦΗΣ ΓΙΑΝΝΗΣ","ΜΕΛΑΜΠΙΑΝΑΚΗΣ ΚΩΣΤΑΣ","ΓΙΑΝΝΙΤΣΑΝΑΚΗΣ ΣΗΦΗΣ"];
-const SECRET_TOKEN = "store311_2025_secure_token_93hfuWvL8p7Zt!xA";
+const SECRET_TOKEN = "store311_2025_secure_token_93hfuWvL8p7Zt_xA";
 const DEVICE_STORAGE_KEY = "store311_device_token_v1";
 let DEVICE_TOKEN = localStorage.getItem(DEVICE_STORAGE_KEY);
 if (!DEVICE_TOKEN) {
@@ -412,13 +412,18 @@ async function sendWebhookIfAny(payload) {
   }
   let url = withToken(base, SECRET_TOKEN);
   url = withDevice(url, DEVICE_TOKEN);
+  // Όνομα και στο query — fallback αν το POST body χαθεί σε redirect
+  if (payload && payload.name) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = url + sep + 'name=' + encodeURIComponent(payload.name);
+  }
   try {
     const ctrl = new AbortController();
     // Apps Script συχνά αργεί στο πρώτο κάλεσμα (cold start) — 45s
     const t = setTimeout(() => ctrl.abort('timeout'), 45000);
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
       cache: 'no-store',
       redirect: 'follow',
@@ -744,4 +749,3 @@ $("#calc-month")?.addEventListener('click', () => {
 </script>
 </body>
 </html>
-
