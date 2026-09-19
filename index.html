@@ -476,10 +476,7 @@ function minutesBetween(a, b) {
   const start = new Date(a);
   const end = new Date(b);
   if (isNaN(start) || isNaN(end)) return 0;
-  const m = start.getMinutes();
-  if (m >= 55) {
-    start.setHours(start.getHours() + 1, 0, 0, 0);
-  }
+  // Πραγματική διάρκεια — ΧΩΡΙΣ στρογγύλευση :55→:00 (έκοβε λεπτά, π.χ. 56'→51')
   const diff = (end - start) / 60000;
   return Math.max(0, Math.round(diff));
 }
