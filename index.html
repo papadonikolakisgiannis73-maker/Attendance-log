@@ -414,7 +414,8 @@ async function sendWebhookIfAny(payload) {
   url = withDevice(url, DEVICE_TOKEN);
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 10000);
+    // Apps Script συχνά αργεί στο πρώτο κάλεσμα (cold start) — 45s
+    const t = setTimeout(() => ctrl.abort('timeout'), 45000);
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -426,12 +427,23 @@ async function sendWebhookIfAny(payload) {
     clearTimeout(t);
     const data = await res.json().catch(() => null);
     const ok = res.ok && data && data.ok === true;
-    document.getElementById('statusRow').textContent =
-      ok ? `Cloud: OK ${res.status}` : `Cloud: ERR ${res.status}`;
+    if (ok) {
+      document.getElementById('statusRow').textContent = `Cloud: OK`;
+    } else {
+      const errMsg = (data && data.error) ? data.error : ('HTTP ' + res.status);
+      document.getElementById('statusRow').textContent = `Cloud: ERR ${errMsg}`;
+    }
     return data;
   } catch (err) {
-    document.getElementById('statusRow').textContent =
-      'Cloud error: ' + (err?.message || err);
+    const name = err && err.name;
+    const msg = String(err && err.message ? err.message : err);
+    let text = 'Cloud error: ' + msg;
+    if (name === 'AbortError' || /aborted|timeout/i.test(msg)) {
+      text = 'Cloud: timeout — το Apps Script άργησε >45s. Ξαναδοκίμασε ή κάνε New version Deploy.';
+    } else if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+      text = 'Cloud: δίκτυο/URL — έλεγξε Webhook URL & Deploy (Anyone).';
+    }
+    document.getElementById('statusRow').textContent = text;
     return null;
   }
 }
@@ -732,3 +744,4 @@ $("#calc-month")?.addEventListener('click', () => {
 </script>
 </body>
 </html>
+
