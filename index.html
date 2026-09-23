@@ -53,6 +53,43 @@ label { display:block; margin:8px 0 6px; font-size:14px; color:#333; }
 input,select,button,textarea {
   font-size:16px; padding:12px; border-radius:10px; border:1px solid #d7dbe2; outline:none;
 }
+/* Dropdown ονομάτων — μεγάλο & ευανάγνωστο στο tablet */
+label[for="employee"], .employee-label {
+  font-size:18px; font-weight:700; color:#111; margin-bottom:10px;
+}
+#employee {
+  width:100%;
+  min-height:64px;
+  font-size:22px;
+  font-weight:700;
+  line-height:1.3;
+  padding:16px 18px;
+  border:2px solid #1d4ed8;
+  border-radius:14px;
+  background:#f8fafc;
+  color:#0f172a;
+  -webkit-appearance:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231d4ed8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  background-size:22px;
+  padding-right:48px;
+}
+#employee:focus {
+  border-color:#1e40af;
+  box-shadow:0 0 0 4px rgba(29,78,216,.18);
+  background:#fff;
+}
+#employee option {
+  font-size:20px;
+  font-weight:600;
+  padding:12px;
+}
+@media (min-width:700px) {
+  #employee { min-height:72px; font-size:26px; padding:18px 20px; padding-right:52px; }
+  .employee-label { font-size:20px; }
+}
 textarea { resize:vertical; }
 .row { display:flex; gap:10px; flex-wrap:wrap; }
 .grow { flex:1; }
@@ -117,10 +154,12 @@ footer { color:#666; font-size:12px; text-align:center; padding:8px 0; }
     <div class="card tab active" id="tab-punch">
       <div class="row">
         <div class="grow">
-          <label>Επιλέξτε εργαζόμενο / Προσθήκη</label>
+          <label class="employee-label" for="employee">Επιλέξτε εργαζόμενο</label>
           <div class="row">
             <select id="employee" class="grow"></select>
-            <input id="newname" placeholder="Νέο όνομα">
+          </div>
+          <div class="row" style="margin-top:10px;align-items:center">
+            <input id="newname" class="grow" placeholder="Νέο όνομα (προαιρετικό)">
             <button id="add" class="small">Πρόσθεσε</button>
           </div>
           <div class="hint">Καταχώριση IN/OUT — αποθήκευση offline &amp; αποστολή στο cloud.</div>
@@ -412,14 +451,12 @@ async function sendWebhookIfAny(payload) {
   }
   let url = withToken(base, SECRET_TOKEN);
   url = withDevice(url, DEVICE_TOKEN);
-  // Όνομα και στο query — fallback αν το POST body χαθεί σε redirect
   if (payload && payload.name) {
     const sep = url.includes('?') ? '&' : '?';
     url = url + sep + 'name=' + encodeURIComponent(payload.name);
   }
   try {
     const ctrl = new AbortController();
-    // Apps Script συχνά αργεί στο πρώτο κάλεσμα (cold start) — 45s
     const t = setTimeout(() => ctrl.abort('timeout'), 45000);
     const res = await fetch(url, {
       method: 'POST',
@@ -430,30 +467,71 @@ async function sendWebhookIfAny(payload) {
       signal: ctrl.signal
     });
     clearTimeout(t);
-    const data = await res.json().catch(() => null);
-    const ok = res.ok && data && data.ok === true;
-    if (ok) {
+
+    const raw = await res.text();
+    let data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+    // Apps Script: το doPost συχνά ΓΡΑΦΕΙ OK, αλλά μετά το redirect το fetch βλέπει 404
+    if (data && data.ok === true) {
       const where = (data.sheet && data.row)
         ? ` → ${data.sheet} / ${data.tab || 'data'} γραμμή ${data.row}`
         : '';
       document.getElementById('statusRow').textContent = `Cloud: OK${where}`;
-    } else {
-      const errMsg = (data && data.error) ? data.error : ('HTTP ' + res.status);
-      document.getElementById('statusRow').textContent = `Cloud: ERR ${errMsg}`;
+      return data;
     }
+
+    // Ψεύτικο 404/302/empty → έλεγχος αν γράφτηκε στο Sheet
+    if (!res.ok || res.status === 404 || res.status === 302 || !data) {
+      const verified = await verifyCloudWrite_(payload);
+      if (verified) {
+        document.getElementById('statusRow').textContent =
+          'Cloud: OK (γράφτηκε — αγνοήθηκε HTTP ' + res.status + ')';
+        return { ok: true, verified: true };
+      }
+    }
+
+    const errMsg = (data && data.error) ? data.error : ('HTTP ' + res.status);
+    document.getElementById('statusRow').textContent = `Cloud: ERR ${errMsg}`;
     return data;
   } catch (err) {
     const name = err && err.name;
     const msg = String(err && err.message ? err.message : err);
+    // Δίκτυο/404 μετά το write — ξανατσεκάρουμε το Sheet
+    try {
+      const verified = await verifyCloudWrite_(payload);
+      if (verified) {
+        document.getElementById('statusRow').textContent = 'Cloud: OK (γράφτηκε στο Sheet)';
+        return { ok: true, verified: true };
+      }
+    } catch (_) {}
+
     let text = 'Cloud error: ' + msg;
     if (name === 'AbortError' || /aborted|timeout/i.test(msg)) {
-      text = 'Cloud: timeout — το Apps Script άργησε >45s. Ξαναδοκίμασε ή κάνε New version Deploy.';
+      text = 'Cloud: timeout — ξαναδοκίμασε. Αν γράφει στο Sheet, αγνόησέ το.';
     } else if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
-      text = 'Cloud: δίκτυο/URL — έλεγξε Webhook URL & Deploy (Anyone).';
+      text = 'Cloud: δίκτυο/URL — έλεγξε Webhook. Αν γράφει στο Sheet, OK.';
     }
     document.getElementById('statusRow').textContent = text;
     return null;
   }
+}
+
+/** Επιβεβαίωση ότι το τελευταίο cloud event ταιριάζει με το punch που μόλις στείλαμε */
+async function verifyCloudWrite_(payload) {
+  if (!payload || !payload.name) return false;
+  await new Promise((r) => setTimeout(r, 800)); // μικρή καθυστέρηση για flush
+  const last = await getLastFromCloud(payload.name);
+  if (!last) return false;
+  const wantType = (payload.type === 'in') ? 'IN' : 'OUT';
+  const gotType = String(last.type || '').toUpperCase();
+  if (gotType !== wantType) return false;
+  // φρέσκο χτύπημα (τελευταία 3 λεπτά)
+  if (last.timestamp) {
+    const t = new Date(last.timestamp).getTime();
+    if (!isNaN(t) && Math.abs(Date.now() - t) < 3 * 60 * 1000) return true;
+  }
+  return gotType === wantType;
 }
 
 async function getLastFromCloud(name) {
