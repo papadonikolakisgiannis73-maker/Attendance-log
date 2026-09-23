@@ -110,6 +110,14 @@ textarea { resize:vertical; }
   transform:scale(0.97); box-shadow:0 3px 8px rgba(0,0,0,.25) inset; filter:brightness(0.95);
 }
 @media (max-width:520px){ .bigbtn{ flex-basis:100%; } }
+.undobtn {
+  display:none; width:100%; margin-top:10px; min-height:56px;
+  font-size:20px; font-weight:800; border-radius:14px; cursor:pointer;
+  background:linear-gradient(180deg,#fff7ed 0%,#ffedd5 100%);
+  border:2px solid #fb923c; color:#9a3412;
+}
+.undobtn:active { transform:scale(0.98); filter:brightness(0.96); }
+.undobtn:disabled { opacity:.45; cursor:default; }
 table { width:100%; border-collapse:collapse; margin-top:12px; font-size:14px; }
 th,td { padding:8px; border-bottom:1px solid #eee; text-align:left; }
 .status {
@@ -177,6 +185,7 @@ footer { color:#666; font-size:12px; text-align:center; padding:8px 0; }
         </div>
         <div id="statusRow" class="status">—</div>
         <div id="lastRow" class="hint">Τελευταίο χτύπημα: —</div>
+        <button type="button" id="undoBtn" class="undobtn" disabled>↩ Αναίρεση (10")</button>
       </div>
     </div>
 
@@ -420,8 +429,81 @@ $("#saveSettings").addEventListener('click', () => {
   setTimeout(() => { $("#saveMsg").textContent = ''; }, 1500);
 });
 
+const UNDO_SECS = 10;
+let undoState = null; // { entryId, name, action, iso, cloudPromise, timer }
+
+function clearUndoUI() {
+  if (undoState && undoState.timer) clearInterval(undoState.timer);
+  undoState = null;
+  const btn = $("#undoBtn");
+  if (!btn) return;
+  btn.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = `↩ Αναίρεση (${UNDO_SECS}")`;
+}
+
+function startUndoWindow(entry, cloudPromise) {
+  clearUndoUI();
+  const btn = $("#undoBtn");
+  if (!btn) return;
+  let left = UNDO_SECS;
+  btn.style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = `↩ Αναίρεση (${left}")`;
+  undoState = {
+    entryId: entry.id,
+    name: entry.name,
+    action: entry.action,
+    iso: entry.iso,
+    cloudPromise: cloudPromise || Promise.resolve(),
+    timer: setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        clearUndoUI();
+        return;
+      }
+      btn.textContent = `↩ Αναίρεση (${left}")`;
+    }, 1000)
+  };
+}
+
+async function undoLastPunch() {
+  if (!undoState) return;
+  const st = undoState;
+  clearUndoUI();
+
+  let log = getLog();
+  const idx = log.findIndex((x) => x.id === st.entryId);
+  if (idx >= 0) {
+    const prevNote = log[idx].note || '';
+    log[idx] = {
+      ...log[idx],
+      action: 'VOID',
+      note: prevNote ? (prevNote + ' | ΑΚΥΡΩΣΗ') : 'ΑΚΥΡΩΣΗ (αναίρεση)'
+    };
+    setLog(log);
+  }
+
+  applyStatus(`${st.name}: Ακυρώθηκε το ${st.action}.`, null);
+  updateLastStatus(st.name);
+  renderLog();
+
+  try { await st.cloudPromise; } catch (_) {}
+
+  await sendWebhookIfAny({
+    type: 'void',
+    name: st.name,
+    cancelType: st.action,
+    targetIso: st.iso,
+    iso: new Date().toISOString(),
+    note: 'ΑΚΥΡΩΣΗ (αναίρεση)'
+  });
+}
+
 function lastActionFor(name) {
-  const log = getLog().filter((x) => x.name === name).sort((a, b) => b.iso.localeCompare(a.iso));
+  const log = getLog()
+    .filter((x) => x.name === name && String(x.action || '').toUpperCase() !== 'VOID')
+    .sort((a, b) => b.iso.localeCompare(a.iso));
   return log[0]?.action || null;
 }
 
@@ -522,6 +604,13 @@ async function verifyCloudWrite_(payload) {
   if (!payload || !payload.name) return false;
   await new Promise((r) => setTimeout(r, 800)); // μικρή καθυστέρηση για flush
   const last = await getLastFromCloud(payload.name);
+  if (payload.type === 'void') {
+    // μετά από VOID το τελευταίο ενεργό δεν πρέπει να είναι το ακυρωμένο
+    if (!last) return true;
+    const target = String(payload.targetIso || '');
+    if (!target || !last.timestamp) return true;
+    return String(last.timestamp) !== target;
+  }
   if (!last) return false;
   const wantType = (payload.type === 'in') ? 'IN' : 'OUT';
   const gotType = String(last.type || '').toUpperCase();
@@ -675,8 +764,9 @@ async function punch(action) {
   applyStatus(msg, shiftType);
   updateLastStatus(name);
 
+  let cloudPromise = Promise.resolve();
   if (action === 'IN') {
-    sendWebhookIfAny({
+    cloudPromise = sendWebhookIfAny({
       type: 'in',
       name,
       iso: entry.iso,
@@ -686,12 +776,14 @@ async function punch(action) {
   }
 
   if (action === 'OUT') {
-    const rows = log.filter((x) => x.name === name).sort((a, b) => a.iso.localeCompare(b.iso));
+    const rows = log
+      .filter((x) => x.name === name && String(x.action || '').toUpperCase() !== 'VOID')
+      .sort((a, b) => a.iso.localeCompare(b.iso));
     const lastIn = [...rows].reverse().find((x) => x.action === 'IN');
     let mins = 0;
     if (lastIn) {
       mins = minutesBetween(lastIn.iso, entry.iso);
-      await sendWebhookIfAny({
+      cloudPromise = sendWebhookIfAny({
         type: 'session',
         name,
         start: lastIn.iso,
@@ -706,6 +798,7 @@ async function punch(action) {
     applyStatus(`${name}: Σήμερα έχεις δουλέψει ${todayText}.`, shiftType);
   }
 
+  startUndoWindow(entry, cloudPromise);
   $("#note").value = '';
 }
 
@@ -822,7 +915,11 @@ $("#calc-month")?.addEventListener('click', () => {
   updateLastStatus($("#employee").value);
   document.getElementById('punchIn').addEventListener('click', () => punch('IN'));
   document.getElementById('punchOut').addEventListener('click', () => punch('OUT'));
-  document.getElementById('employee').addEventListener('change', (e) => updateLastStatus(e.target.value));
+  document.getElementById('undoBtn')?.addEventListener('click', () => undoLastPunch());
+  document.getElementById('employee').addEventListener('change', (e) => {
+    clearUndoUI();
+    updateLastStatus(e.target.value);
+  });
 })();
 </script>
 </body>
