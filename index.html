@@ -636,9 +636,23 @@ async function verifyCloudWrite_(payload) {
   return gotType === wantType;
 }
 
+const cloudLastCache_ = new Map(); // name -> { at, last }
+const CLOUD_CACHE_MS = 45000;
+
+function invalidateCloudCache_(name) {
+  if (name) cloudLastCache_.delete(name);
+  else cloudLastCache_.clear();
+}
+
 async function getLastFromCloud(name) {
   const base = getWebhookUrl();
   if (!base || !name) return null;
+
+  const cached = cloudLastCache_.get(name);
+  if (cached && (Date.now() - cached.at) < CLOUD_CACHE_MS) {
+    return cached.last;
+  }
+
   let url = withToken(base, SECRET_TOKEN);
   url = withDevice(url, DEVICE_TOKEN);
   const sep = url.includes('?') ? '&' : '?';
@@ -647,8 +661,10 @@ async function getLastFromCloud(name) {
     const res = await fetch(url, { method: 'GET', cache: 'no-store', redirect: 'follow' });
     if (!res.ok) return null;
     const data = await res.json().catch(() => null);
-    if (!data || !data.ok || !data.last) return null;
-    return data.last;
+    if (!data || !data.ok) return null;
+    const last = data.last || null;
+    cloudLastCache_.set(name, { at: Date.now(), last });
+    return last;
   } catch (err) {
     console.warn('getLastFromCloud error', err);
     return null;
@@ -665,7 +681,6 @@ async function restoreOpenInFromCloud_(name) {
   if (!iso) return false;
   const parts = toParts(iso);
   const log = getLog();
-  // μην διπλοβάλεις το ίδιο IN
   const exists = log.some(
     (x) => x.name === name && x.action === 'IN' && String(x.iso) === String(iso)
   );
@@ -682,6 +697,15 @@ async function restoreOpenInFromCloud_(name) {
     setLog(log);
   }
   return true;
+}
+
+/** Στο background — δεν καθυστερεί το UI / το χτύπημα */
+function restoreOpenInFromCloudBg_(name) {
+  if (!name || name === '—') return;
+  if (lastActionFor(name) === 'IN') return;
+  restoreOpenInFromCloud_(name)
+    .then((ok) => { if (ok) updateLastStatus(name); })
+    .catch(() => {});
 }
 
 function minutesBetween(a, b) {
@@ -765,8 +789,7 @@ async function punch(action) {
   let log = getLog();
   let last = lastActionFor(name);
 
-  // Fallback στο cloud αν πάμε για OUT χωρίς local IN
-  // (μετά από clear data / νέο browser / άλλο tablet το τοπικό log μπορεί να είναι άδειο)
+  // OUT χωρίς local IN → τότε μόνο περιμένουμε cloud (αναγκαίο)
   if (action === 'OUT' && last !== 'IN') {
     applyStatus(`${name}: Έλεγχος ανοιχτής βάρδιας στο cloud…`, null);
     const restored = await restoreOpenInFromCloud_(name);
@@ -791,11 +814,7 @@ async function punch(action) {
     }
   }
 
-  // Μπλοκ διπλό IN — έλεγξε και cloud (αν local άδειο μετά refresh)
-  if (action === 'IN' && last !== 'IN') {
-    await restoreOpenInFromCloud_(name);
-    last = lastActionFor(name);
-  }
+  // IN: μόνο τοπικός έλεγχος — χωρίς αναμονή cloud (γρήγορο χτύπημα)
   if (action === 'IN' && last === 'IN') {
     applyStatus(`⚠ ${name}: Έχεις ήδη κάνει IN.`, null);
     updateLastStatus(name);
@@ -849,6 +868,7 @@ async function punch(action) {
   }
 
   startUndoWindow(entry, cloudPromise);
+  invalidateCloudCache_(name);
   $("#note").value = '';
 }
 
@@ -966,11 +986,11 @@ $("#calc-month")?.addEventListener('click', () => {
   document.getElementById('punchIn').addEventListener('click', () => punch('IN'));
   document.getElementById('punchOut').addEventListener('click', () => punch('OUT'));
   document.getElementById('undoBtn')?.addEventListener('click', () => undoLastPunch());
-  document.getElementById('employee').addEventListener('change', async (e) => {
+  document.getElementById('employee').addEventListener('change', (e) => {
     clearUndoUI();
     const name = e.target.value;
-    await restoreOpenInFromCloud_(name);
-    updateLastStatus(name);
+    updateLastStatus(name); // άμεσα από τοπικό
+    restoreOpenInFromCloudBg_(name); // cloud στο background
   });
 })();
 </script>
