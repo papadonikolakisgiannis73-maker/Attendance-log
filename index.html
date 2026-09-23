@@ -638,10 +638,13 @@ async function verifyCloudWrite_(payload) {
 
 async function getLastFromCloud(name) {
   const base = getWebhookUrl();
-  if (!base) return null;
-  const url = withToken(base, SECRET_TOKEN) + '&name=' + encodeURIComponent(name);
+  if (!base || !name) return null;
+  let url = withToken(base, SECRET_TOKEN);
+  url = withDevice(url, DEVICE_TOKEN);
+  const sep = url.includes('?') ? '&' : '?';
+  url = url + sep + 'name=' + encodeURIComponent(name);
   try {
-    const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+    const res = await fetch(url, { method: 'GET', cache: 'no-store', redirect: 'follow' });
     if (!res.ok) return null;
     const data = await res.json().catch(() => null);
     if (!data || !data.ok || !data.last) return null;
@@ -650,6 +653,35 @@ async function getLastFromCloud(name) {
     console.warn('getLastFromCloud error', err);
     return null;
   }
+}
+
+/** Αν υπάρχει ανοιχτό IN στο Sheet και λείπει τοπικά, το επαναφέρει στο log */
+async function restoreOpenInFromCloud_(name) {
+  if (!name || name === '—') return false;
+  if (lastActionFor(name) === 'IN') return true;
+  const cloudLast = await getLastFromCloud(name);
+  if (!cloudLast || String(cloudLast.type || '').toUpperCase() !== 'IN') return false;
+  const iso = cloudLast.timestamp;
+  if (!iso) return false;
+  const parts = toParts(iso);
+  const log = getLog();
+  // μην διπλοβάλεις το ίδιο IN
+  const exists = log.some(
+    (x) => x.name === name && x.action === 'IN' && String(x.iso) === String(iso)
+  );
+  if (!exists) {
+    log.push({
+      id: 'cloud_' + Math.random().toString(36).slice(2),
+      name,
+      action: 'IN',
+      iso,
+      date: parts.date,
+      time: parts.time,
+      note: '(cloud restore)'
+    });
+    setLog(log);
+  }
+  return true;
 }
 
 function minutesBetween(a, b) {
@@ -734,31 +766,36 @@ async function punch(action) {
   let last = lastActionFor(name);
 
   // Fallback στο cloud αν πάμε για OUT χωρίς local IN
+  // (μετά από clear data / νέο browser / άλλο tablet το τοπικό log μπορεί να είναι άδειο)
   if (action === 'OUT' && last !== 'IN') {
-    const cloudLast = await getLastFromCloud(name);
-    if (cloudLast && String(cloudLast.type).toUpperCase() === 'IN') {
-      const iso = cloudLast.timestamp;
-      const parts = toParts(iso);
-      log.push({
-        id: 'cloud_' + Math.random().toString(36).slice(2),
-        name,
-        action: 'IN',
-        iso,
-        date: parts.date,
-        time: parts.time,
-        note: '(cloud restore)'
-      });
-      setLog(log);
-      last = 'IN';
-    } else {
-      applyStatus(`${name}: Δεν υπάρχει ενεργή βάρδια για OUT.`, null);
+    applyStatus(`${name}: Έλεγχος ανοιχτής βάρδιας στο cloud…`, null);
+    const restored = await restoreOpenInFromCloud_(name);
+    log = getLog();
+    last = lastActionFor(name);
+    if (!restored || last !== 'IN') {
+      const cloudLast = await getLastFromCloud(name);
+      if (!cloudLast) {
+        applyStatus(
+          `${name}: Δεν βρέθηκε τοπικό IN και το cloud δεν απάντησε. Έλεγξε Webhook URL στις Ρυθμίσεις.`,
+          null
+        );
+      } else {
+        applyStatus(
+          `${name}: Δεν υπάρχει ενεργή βάρδια για OUT (τελευταίο cloud: ${String(cloudLast.type || '?').toUpperCase()}).`,
+          null
+        );
+      }
       updateLastStatus(name);
       $("#note").value = '';
       return;
     }
   }
 
-  // Μπλοκ διπλό IN
+  // Μπλοκ διπλό IN — έλεγξε και cloud (αν local άδειο μετά refresh)
+  if (action === 'IN' && last !== 'IN') {
+    await restoreOpenInFromCloud_(name);
+    last = lastActionFor(name);
+  }
   if (action === 'IN' && last === 'IN') {
     applyStatus(`⚠ ${name}: Έχεις ήδη κάνει IN.`, null);
     updateLastStatus(name);
@@ -929,9 +966,11 @@ $("#calc-month")?.addEventListener('click', () => {
   document.getElementById('punchIn').addEventListener('click', () => punch('IN'));
   document.getElementById('punchOut').addEventListener('click', () => punch('OUT'));
   document.getElementById('undoBtn')?.addEventListener('click', () => undoLastPunch());
-  document.getElementById('employee').addEventListener('change', (e) => {
+  document.getElementById('employee').addEventListener('change', async (e) => {
     clearUndoUI();
-    updateLastStatus(e.target.value);
+    const name = e.target.value;
+    await restoreOpenInFromCloud_(name);
+    updateLastStatus(name);
   });
 })();
 </script>
