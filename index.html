@@ -537,6 +537,19 @@ async function sendWebhookIfAny(payload) {
     const sep = url.includes('?') ? '&' : '?';
     url = url + sep + 'name=' + encodeURIComponent(payload.name);
   }
+  // type στο query — αν χαθεί το JSON στο Google redirect, το doPost το διαβάζει από εδώ
+  if (payload && payload.type) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = url + sep + 'type=' + encodeURIComponent(String(payload.type));
+  }
+  if (payload && payload.cancelType) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = url + sep + 'cancelType=' + encodeURIComponent(String(payload.cancelType));
+  }
+  if (payload && payload.targetIso) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = url + sep + 'targetIso=' + encodeURIComponent(String(payload.targetIso));
+  }
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort('timeout'), 45000);
