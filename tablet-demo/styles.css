@@ -680,6 +680,91 @@ button {
   gap: 8px;
 }
 
+.late-banner {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(196, 94, 42, 0.14);
+  border: 1px solid rgba(196, 94, 42, 0.35);
+  color: var(--warn);
+  font-weight: 800;
+  text-align: center;
+}
+
+.mailto-note,
+.pin-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.dayrate-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.dayrate-panel .btn {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.check-row input {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-pin-box {
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.month-table-wrap {
+  overflow: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.month-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-table th,
+.month-table td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.month-table th {
+  position: sticky;
+  top: 0;
+  background: #eef4e8;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.month-table td:nth-child(n + 2),
+.month-table th:nth-child(n + 2) {
+  text-align: right;
+}
+
 .toast {
   position: fixed;
   left: 50%;
