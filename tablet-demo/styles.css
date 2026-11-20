@@ -1,22 +1,22 @@
 :root {
-  --bg0: #12160f;
-  --bg1: #1c2418;
-  --bg2: #24301f;
-  --ink: #f3efe4;
-  --muted: #b7c0a8;
-  --line: rgba(243, 239, 228, 0.14);
-  --accent: #d6a24a;
+  --bg0: #f4f7f0;
+  --bg1: #e8efe2;
+  --bg2: #ffffff;
+  --ink: #1a2214;
+  --muted: #5a6750;
+  --line: rgba(26, 34, 20, 0.14);
+  --accent: #c48a1a;
   --accent-ink: #1a1408;
-  --ok: #6fbf7a;
-  --warn: #e07a4a;
-  --danger: #c45c5c;
-  --slot: rgba(255, 255, 255, 0.04);
-  --slot-filled: rgba(214, 162, 74, 0.16);
+  --ok: #2f8a45;
+  --warn: #c45e2a;
+  --danger: #b03a3a;
+  --slot: rgba(26, 34, 20, 0.03);
+  --slot-filled: rgba(196, 138, 26, 0.12);
   --radius: 18px;
   --tap: 72px;
   --font-display: "Syne", "Segoe UI", sans-serif;
   --font-body: "Manrope", "Segoe UI", sans-serif;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -38,15 +38,17 @@ body {
 body {
   min-height: 100dvh;
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(214, 162, 74, 0.18), transparent 55%),
-    radial-gradient(90% 60% at 100% 20%, rgba(80, 120, 70, 0.22), transparent 50%),
-    radial-gradient(70% 50% at 0% 90%, rgba(40, 70, 55, 0.35), transparent 45%),
-    linear-gradient(180deg, var(--bg1), var(--bg0) 48%, #0d100c);
+    radial-gradient(120% 80% at 50% -10%, rgba(196, 138, 26, 0.16), transparent 55%),
+    radial-gradient(90% 60% at 100% 15%, rgba(47, 138, 69, 0.12), transparent 50%),
+    radial-gradient(70% 50% at 0% 90%, rgba(120, 160, 90, 0.14), transparent 45%),
+    linear-gradient(180deg, #fafcf7, var(--bg0) 42%, #e4ecdc);
   overflow-x: hidden;
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
@@ -112,13 +114,30 @@ button {
   letter-spacing: -0.03em;
   line-height: 1.02;
   word-break: keep-all;
+  color: var(--ink);
 }
 
 .brand-sub {
   margin: 14px auto 0;
-  max-width: 22ch;
+  max-width: 26ch;
   color: var(--muted);
   font-size: 1.05rem;
+}
+
+.storage-note {
+  margin: 10px auto 0;
+  max-width: 34ch;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(196, 138, 26, 0.35);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.storage-note strong {
+  color: var(--ink);
 }
 
 .home-clock {
@@ -174,20 +193,26 @@ button {
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 1.35rem;
-  box-shadow: 0 14px 40px rgba(214, 162, 74, 0.28);
+  box-shadow: 0 12px 28px rgba(196, 138, 26, 0.28);
 }
 
 .btn-ghost {
   border: 1px solid var(--line);
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.7);
   font-size: 1rem;
 }
 
 .btn-danger {
-  background: rgba(196, 92, 92, 0.18);
-  color: #ffb4b4;
-  border: 1px solid rgba(196, 92, 92, 0.35);
+  background: rgba(176, 58, 58, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(176, 58, 58, 0.28);
+}
+
+.btn-sm {
+  min-height: 52px;
+  font-size: 0.95rem;
+  padding: 0 18px;
 }
 
 .topbar {
@@ -210,11 +235,12 @@ button {
   height: 52px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.85);
   font-size: 1.3rem;
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  color: var(--ink);
 }
 
 .day-meta {
@@ -280,7 +306,7 @@ button {
 
 .slot.filled {
   border-style: solid;
-  border-color: rgba(214, 162, 74, 0.45);
+  border-color: rgba(196, 138, 26, 0.5);
   background: var(--slot-filled);
 }
 
@@ -324,7 +350,7 @@ button {
   bottom: 0;
   margin-top: auto;
   padding: 12px 0 4px;
-  background: linear-gradient(180deg, transparent, rgba(13, 16, 12, 0.92) 30%);
+  background: linear-gradient(180deg, transparent, rgba(244, 247, 240, 0.96) 30%);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -333,7 +359,7 @@ button {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(6, 8, 5, 0.72);
+  background: rgba(26, 34, 20, 0.42);
   backdrop-filter: blur(6px);
   display: none;
   align-items: flex-end;
@@ -359,8 +385,7 @@ button {
 .sheet {
   width: min(100%, 760px);
   max-height: min(88dvh, 920px);
-  background:
-    linear-gradient(180deg, #2a3424, #1a2117 40%, #141a12);
+  background: linear-gradient(180deg, #ffffff, #f3f7ef 55%, #eaf1e3);
   border: 1px solid var(--line);
   border-radius: 28px 28px 18px 18px;
   padding: 18px 16px 20px;
@@ -368,6 +393,7 @@ button {
   flex-direction: column;
   gap: 14px;
   animation: sheet-up 0.28s ease;
+  box-shadow: 0 -8px 40px rgba(26, 34, 20, 0.12);
 }
 
 @keyframes sheet-up {
@@ -393,17 +419,41 @@ button {
   font-size: 0.95rem;
 }
 
-.search {
+.search,
+.field-input,
+.field-select,
+.notes-input {
   width: 100%;
   min-height: 60px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.25);
+  background: #fff;
   padding: 0 18px;
   font-size: 1.15rem;
 }
 
-.name-list {
+.notes-input {
+  min-height: 110px;
+  padding: 14px 18px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.name-list,
+.admin-list {
   overflow: auto;
   display: grid;
   gap: 8px;
@@ -411,11 +461,12 @@ button {
   flex: 1;
 }
 
-.name-item {
+.name-item,
+.admin-item {
   min-height: 70px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.9);
   padding: 12px 16px;
   text-align: left;
   display: flex;
@@ -424,13 +475,40 @@ button {
   gap: 2px;
 }
 
-.name-item strong {
+.name-item strong,
+.admin-item strong {
   font-size: 1.2rem;
 }
 
-.name-item span {
+.name-item span,
+.admin-item span {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.admin-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-item.inactive {
+  opacity: 0.55;
+}
+
+.admin-item .btn-sm {
+  flex-shrink: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
 }
 
 .person-hero {
@@ -486,17 +564,17 @@ button {
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0;
-  opacity: 0.85;
+  opacity: 0.9;
   text-transform: none;
 }
 
 .stamp-arrive {
-  background: linear-gradient(180deg, #7bc987, #4f9a5c);
+  background: linear-gradient(180deg, #6fc87e, #3f9a52);
   color: #0d1a10;
 }
 
 .stamp-leave {
-  background: linear-gradient(180deg, #e8b15d, #c57f2f);
+  background: linear-gradient(180deg, #e4b04a, #c48a1a);
   color: #1a1206;
 }
 
@@ -504,7 +582,7 @@ button {
   min-height: 84px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.85);
   padding: 12px 18px;
   display: grid;
   grid-template-columns: 1fr auto;
@@ -519,8 +597,8 @@ button {
 
 .time-chip:active {
   transform: scale(0.99);
-  background: rgba(214, 162, 74, 0.12);
-  border-color: rgba(214, 162, 74, 0.45);
+  background: rgba(196, 138, 26, 0.12);
+  border-color: rgba(196, 138, 26, 0.45);
 }
 
 .time-chip-label {
@@ -543,7 +621,7 @@ button {
   grid-area: hint;
   color: var(--muted);
   font-size: 0.85rem;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .time-actions {
@@ -563,8 +641,8 @@ button {
   min-height: 64px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1.15rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -581,7 +659,7 @@ button {
   padding: 16px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .hours-panel .label {
@@ -597,13 +675,18 @@ button {
   color: var(--ok);
 }
 
+.notes-panel {
+  display: grid;
+  gap: 8px;
+}
+
 .toast {
   position: fixed;
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%) translateY(20px);
-  background: #f3efe4;
-  color: #16140f;
+  background: var(--ink);
+  color: #f4f7f0;
   padding: 14px 22px;
   border-radius: 999px;
   font-weight: 700;
@@ -664,6 +747,6 @@ button {
   .app {
     border-left: 1px solid var(--line);
     border-right: 1px solid var(--line);
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.35);
   }
 }

@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#12160f" />
+    <meta name="theme-color" content="#f4f7f0" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>ΠΑΡΟΥΣΙΟΛΟΓΙΟ — STORE 311</title>
@@ -26,6 +26,10 @@
           <span class="brand-store">STORE 311</span>
           <h1 class="brand-title">ΠΑΡΟΥΣΙΟΛΟΓΙΟ</h1>
           <p class="brand-sub">Απλό παρουσιολόγιο για tablet — χωρίς Excel, χωρίς internet.</p>
+          <p class="storage-note">
+            <strong>Αποθήκευση:</strong> όλα μένουν σε αυτό το tablet (localStorage του browser).
+            Δεν ανεβαίνουν στο cloud και δεν συγχρονίζονται με άλλα tablets.
+          </p>
         </header>
 
         <div class="home-clock">
@@ -39,6 +43,7 @@
           <button type="button" class="btn btn-ghost" id="btn-continue" hidden>
             Συνέχεια σημερινής
           </button>
+          <button type="button" class="btn btn-ghost" id="btn-names">Ονόματα</button>
         </div>
       </section>
 
@@ -47,6 +52,7 @@
         <div class="topbar">
           <button type="button" class="icon-btn" id="btn-back-home" aria-label="Αρχική">←</button>
           <h1>Ημέρα</h1>
+          <button type="button" class="icon-btn" id="btn-export" aria-label="Εξαγωγή JSON" title="Εξαγωγή">⬇</button>
           <button type="button" class="icon-btn" id="btn-print" aria-label="Εκτύπωση">⎙</button>
         </div>
         <div class="day-meta">
@@ -56,7 +62,7 @@
         <div class="board" id="board"></div>
         <div class="fab-bar">
           <button type="button" class="btn btn-ghost" id="btn-clear-day">Καθαρισμός</button>
-          <button type="button" class="btn btn-primary" id="btn-back-home-2" onclick="document.getElementById('btn-back-home').click()">Αρχική</button>
+          <button type="button" class="btn btn-primary" id="btn-back-home-2">Αρχική</button>
         </div>
       </section>
 
@@ -106,9 +112,54 @@
           <div class="value" id="person-hours">—</div>
         </div>
 
+        <div class="notes-panel">
+          <label class="field-label" for="person-notes">Σημειώσεις</label>
+          <textarea
+            class="notes-input"
+            id="person-notes"
+            rows="3"
+            placeholder="Π.χ. αντικατάσταση, καθυστέρηση…"
+          ></textarea>
+        </div>
+
         <div class="cta-stack">
           <button type="button" class="btn btn-danger" id="btn-remove">Αφαίρεση από πόστο</button>
         </div>
+      </section>
+
+      <!-- NAMES ADMIN -->
+      <section id="screen-names" class="screen" aria-label="Ονόματα">
+        <div class="topbar">
+          <button type="button" class="icon-btn" id="btn-back-names" aria-label="Αρχική">←</button>
+          <h1>Ονόματα</h1>
+          <span style="width: 52px"></span>
+        </div>
+        <p class="storage-note" style="margin: 0">
+          Προσθέστε ή απενεργοποιήστε ονόματα. Οι αλλαγές μένουν σε αυτό το tablet (localStorage).
+        </p>
+        <div class="field-stack">
+          <div>
+            <label class="field-label" for="new-name">Νέο όνομα</label>
+            <input class="field-input" id="new-name" type="text" autocomplete="off" placeholder="Π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ" />
+          </div>
+          <div>
+            <label class="field-label" for="new-short">Σύντομο (προαιρετικό)</label>
+            <input class="field-input" id="new-short" type="text" autocomplete="off" placeholder="Εμφάνιση στη λίστα" />
+          </div>
+          <div>
+            <label class="field-label" for="new-dept">Τμήμα / πόστο</label>
+            <select class="field-select" id="new-dept"></select>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-add-name">Προσθήκη ονόματος</button>
+        </div>
+        <input
+          class="search"
+          id="admin-search"
+          type="search"
+          placeholder="Αναζήτηση καταλόγου…"
+          autocomplete="off"
+        />
+        <div class="admin-list" id="admin-list"></div>
       </section>
     </div>
 
@@ -138,7 +189,7 @@
           <h2 id="time-picker-title">Επιλογή ώρας</h2>
           <button type="button" class="icon-btn" id="btn-close-time" aria-label="Κλείσιμο">✕</button>
         </div>
-        <p class="sheet-sub" id="time-picker-sub">Κάθε 15 λεπτά</p>
+        <p class="sheet-sub" id="time-picker-sub">Κάθε 5 λεπτά</p>
         <div class="time-actions">
           <button type="button" class="btn btn-ghost" id="btn-clear-time">Καθαρισμός ώρας</button>
         </div>
