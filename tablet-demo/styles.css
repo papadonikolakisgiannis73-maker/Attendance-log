@@ -107,12 +107,13 @@ button {
 }
 
 .brand-title {
-  margin: 0;
+  margin: 0 auto;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(2.1rem, 8.5vw, 3.4rem);
-  letter-spacing: -0.03em;
-  line-height: 1.02;
+  font-size: clamp(1.55rem, 6.2vw, 2.35rem);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  max-width: 100%;
   word-break: keep-all;
   color: var(--ink);
 }
@@ -707,6 +708,20 @@ button {
 .dayrate-panel .btn {
   text-transform: none;
   letter-spacing: 0.02em;
+}
+
+.dayrate-helper {
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.month-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
 }
 
 .check-row {

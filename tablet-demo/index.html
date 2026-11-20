@@ -29,11 +29,6 @@
         <header class="brand">
           <span class="brand-store">STORE 311</span>
           <h1 class="brand-title">ΠΑΡΟΥΣΙΟΛΟΓΙΟ</h1>
-          <p class="brand-sub">Απλό παρουσιολόγιο για tablet — χωρίς Excel, χωρίς internet.</p>
-          <p class="storage-note">
-            <strong>Αποθήκευση:</strong> όλα μένουν σε αυτό το tablet (localStorage του browser).
-            Δεν ανεβαίνουν στο cloud και δεν συγχρονίζονται με άλλα tablets.
-          </p>
         </header>
 
         <div class="home-clock">
@@ -101,7 +96,7 @@
           <button type="button" class="btn btn-primary" id="btn-dayrate">
             Ημερομίσθιο (1)
           </button>
-          <p class="sheet-sub" id="dayrate-status">Για ΥΠΕΥΘΥΝΟΙ / DJ: παρουσία = 1 ημέρα.</p>
+          <p class="sheet-sub dayrate-helper" id="dayrate-status">ΑΝ ΕΙΣΑΙ ΗΜΕΡΟΜΙΣΘΙΟ</p>
         </div>
 
         <div class="time-block" id="clock-block">
@@ -129,7 +124,7 @@
         </div>
 
         <p class="pin-hint" id="pin-hint">
-          Η 1η χειροκίνητη διόρθωση ώρας είναι δωρεάν· μετά χρειάζεται PIN admin.
+          2 δωρεάν χειροκίνητες διορθώσεις ώρας ανά άτομο· μετά χρειάζεται PIN admin.
         </p>
 
         <div class="hours-panel">
@@ -171,7 +166,7 @@
             <input class="field-input" id="admin-pin-new" type="password" inputmode="numeric" placeholder="Νέο PIN (π.χ. 3111)" autocomplete="off" />
           </div>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-change-pin">Αποθήκευση PIN</button>
-          <p class="sheet-sub">Προεπιλογή: 3111 — για 2η+ διόρθωση ώρας και παλιές ημέρες.</p>
+          <p class="sheet-sub">Προεπιλογή: 3111 — μετά από 2 δωρεάν διορθώσεις ώρας / άνοιγμα Μήνα, Ονομάτων, άλλης ημερομηνίας.</p>
         </div>
         <div class="field-stack">
           <div>
@@ -207,7 +202,7 @@
         <div class="topbar">
           <button type="button" class="icon-btn" id="btn-back-month" aria-label="Αρχική">←</button>
           <h1>Μήνας</h1>
-          <span style="width: 52px"></span>
+          <button type="button" class="icon-btn" id="btn-month-email" aria-label="Email μήνα" title="Email">✉</button>
         </div>
         <div class="field-stack">
           <div>
@@ -215,9 +210,13 @@
             <input class="field-input" id="month-picker" type="month" />
           </div>
         </div>
-        <p class="storage-note" style="margin: 0">
-          Σύνολα από τις ημέρες που έχουν αποθηκευτεί σε αυτό το tablet (localStorage).
-          Ημερομίσθιο μετράει ως 1 ημέρα.
+        <div class="month-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-month-pdf">PDF</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-month-excel">Excel</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-month-email-2">Email</button>
+        </div>
+        <p class="mailto-note">
+          PDF = εκτύπωση/αποθήκευση από τον browser · Excel = αρχείο CSV · Email = mailto (όχι auto server).
         </p>
         <div class="month-table-wrap">
           <table class="month-table" id="month-table">

@@ -3,6 +3,7 @@
   const LEGACY_KEY = "parousiologio-offline-demo-v1";
   const ROSTER_KEY = "parousiologio-offline-roster-v1";
   const DEFAULT_PIN = "3111";
+  const FREE_MANUAL_EDITS = 2;
   const DAYRATE_DEPTS = new Set(["DJ", "ΥΠΕΥΘΥΝΟΙ"]);
 
   const POSTS = [
@@ -63,7 +64,6 @@
     slots: {},
     days: {},
     lateEntry: false,
-    manualEdits: 0,
     customEmployees: [],
     deactivatedIds: [],
     pin: DEFAULT_PIN,
@@ -159,6 +159,10 @@
     btnBackMonth: document.getElementById("btn-back-month"),
     monthPicker: document.getElementById("month-picker"),
     monthBody: document.getElementById("month-body"),
+    btnMonthEmail: document.getElementById("btn-month-email"),
+    btnMonthEmail2: document.getElementById("btn-month-email-2"),
+    btnMonthPdf: document.getElementById("btn-month-pdf"),
+    btnMonthExcel: document.getElementById("btn-month-excel"),
     toast: document.getElementById("toast"),
     printRoot: document.getElementById("print-root"),
   };
@@ -249,7 +253,7 @@
   }
 
   function emptyDay() {
-    return { slots: {}, lateEntry: false, manualEdits: 0 };
+    return { slots: {}, lateEntry: false };
   }
 
   function persistCurrentDayIntoHistory() {
@@ -257,7 +261,6 @@
     state.days[state.dateKey] = {
       slots: state.slots,
       lateEntry: !!state.lateEntry,
-      manualEdits: state.manualEdits || 0,
     };
   }
 
@@ -266,7 +269,6 @@
     state.dateKey = key;
     state.slots = day.slots || {};
     state.lateEntry = !!day.lateEntry;
-    state.manualEdits = day.manualEdits || 0;
   }
 
   function save() {
@@ -309,7 +311,6 @@
             state.days[data.dateKey] = {
               slots: data.slots,
               lateEntry: false,
-              manualEdits: 0,
             };
             loadDayIntoState(data.dateKey);
             save();
@@ -429,13 +430,19 @@
     if (typeof action === "function") action();
   }
 
+  function slotManualEdits(slot) {
+    return (slot && slot.manualEdits) || 0;
+  }
+
   function withManualTimeGuard(fn) {
-    if (state.manualEdits < 1) {
+    const slot = state.slots[state.activeSlot];
+    if (!slot) return;
+    if (slotManualEdits(slot) < FREE_MANUAL_EDITS) {
       fn();
       return;
     }
     askPin(
-      "Η δωρεάν χειροκίνητη διόρθωση χρησιμοποιήθηκε. Βάλτε PIN admin για νέα αλλαγή ώρας.",
+      `Οι ${FREE_MANUAL_EDITS} δωρεάν διορθώσεις ώρας για αυτό το άτομο χρησιμοποιήθηκαν. Βάλτε PIN admin.`,
       fn
     );
   }
@@ -512,6 +519,7 @@
       notes: "",
       dayRate: false,
       dayRateEligible: isDayRateEligible(emp),
+      manualEdits: 0,
     };
     save();
     closePicker();
@@ -533,10 +541,10 @@
 
     const eligible = slot.dayRateEligible || isDayRateEligible(slot);
     els.dayratePanel.hidden = !eligible;
+    els.dayrateStatus.textContent = "ΑΝ ΕΙΣΑΙ ΗΜΕΡΟΜΙΣΘΙΟ";
     if (slot.dayRate) {
       els.hoursLabel.textContent = "Παρουσία";
       els.personHours.textContent = "1 ημέρα";
-      els.dayrateStatus.textContent = "Ενεργό ημερομίσθιο (1). Πατήστε ξανά για ακύρωση.";
       els.btnDayrate.textContent = "Ακύρωση ημερομισθίου";
       els.clockBlock.style.opacity = "0.45";
       els.clockBlockLeave.style.opacity = "0.45";
@@ -545,16 +553,16 @@
       els.personHours.textContent = formatHours(
         calcHours(slot.arrival, slot.departure)
       );
-      els.dayrateStatus.textContent =
-        "Για ΥΠΕΥΘΥΝΟΙ / DJ: παρουσία = 1 ημέρα αντί για ώρες.";
       els.btnDayrate.textContent = "Ημερομίσθιο (1)";
       els.clockBlock.style.opacity = "1";
       els.clockBlockLeave.style.opacity = "1";
     }
 
+    const used = slotManualEdits(slot);
+    const left = Math.max(0, FREE_MANUAL_EDITS - used);
     els.pinHint.textContent =
-      state.manualEdits < 1
-        ? "Η 1η χειροκίνητη διόρθωση ώρας είναι δωρεάν· μετά χρειάζεται PIN admin."
+      left > 0
+        ? `${left} δωρεάν χειροκίνητες διορθώσεις ακόμα για αυτό το άτομο· μετά PIN admin.`
         : "Χρειάζεται PIN admin για νέα χειροκίνητη διόρθωση ώρας.";
 
     setView("person");
@@ -648,12 +656,16 @@
     });
   }
 
+  function bumpManualEdit(slot) {
+    slot.manualEdits = slotManualEdits(slot) + 1;
+  }
+
   function applyTime(t) {
     const slot = state.slots[state.activeSlot];
     const field = state.timeField;
     if (!slot || !field) return;
     slot[field] = t;
-    state.manualEdits += 1;
+    bumpManualEdit(slot);
     save();
     closeTimePicker();
     openPerson(state.activeSlot);
@@ -663,16 +675,12 @@
   function clearTimeField() {
     const slot = state.slots[state.activeSlot];
     if (!slot || !state.timeField) return;
-    const doClear = () => {
-      slot[state.timeField] = null;
-      state.manualEdits += 1;
-      save();
-      closeTimePicker();
-      openPerson(state.activeSlot);
-      showToast("Η ώρα καθαρίστηκε");
-    };
-    // clearing counts as manual edit; already passed guard to open picker
-    doClear();
+    slot[state.timeField] = null;
+    bumpManualEdit(slot);
+    save();
+    closeTimePicker();
+    openPerson(state.activeSlot);
+    showToast("Η ώρα καθαρίστηκε");
   }
 
   function changeName() {
@@ -717,8 +725,10 @@
   }
 
   function openDateSheet() {
-    els.otherDate.value = state.dateKey || todayKey();
-    els.datePicker.classList.add("open");
+    askPin("PIN admin για άνοιγμα άλλης ημερομηνίας.", () => {
+      els.otherDate.value = state.dateKey || todayKey();
+      els.datePicker.classList.add("open");
+    });
   }
 
   function closeDateSheet() {
@@ -731,30 +741,20 @@
       showToast("Διαλέξτε ημερομηνία");
       return;
     }
-    const go = () => {
-      persistCurrentDayIntoHistory();
-      if (!state.days[key]) state.days[key] = emptyDay();
-      loadDayIntoState(key);
-      if (key !== todayKey()) {
-        state.lateEntry = true;
-        if (!state.days[key].lateEntry) state.lateEntry = true;
-      } else {
-        state.lateEntry = !!state.days[key].lateEntry;
-      }
-      save();
-      closeDateSheet();
-      showDayScreen();
-      showToast(
-        key === todayKey()
-          ? "Σημερινή ημέρα"
-          : "Εκπρόθεσμη καταχώρηση"
-      );
-    };
+    persistCurrentDayIntoHistory();
+    if (!state.days[key]) state.days[key] = emptyDay();
+    loadDayIntoState(key);
     if (key !== todayKey()) {
-      askPin("Για επεξεργασία παλιάς ημέρας χρειάζεται PIN admin.", go);
+      state.lateEntry = true;
     } else {
-      go();
+      state.lateEntry = !!state.days[key].lateEntry;
     }
+    save();
+    closeDateSheet();
+    showDayScreen();
+    showToast(
+      key === todayKey() ? "Σημερινή ημέρα" : "Εκπρόθεσμη καταχώρηση"
+    );
   }
 
   function clearDay() {
@@ -766,7 +766,6 @@
       return;
     }
     state.slots = {};
-    state.manualEdits = 0;
     save();
     renderBoard();
     showToast("Η ημέρα καθαρίστηκε");
@@ -831,14 +830,16 @@
   }
 
   function openNames() {
-    els.adminSearch.value = "";
-    els.newName.value = "";
-    els.newShort.value = "";
-    els.newDayrate.checked = false;
-    els.adminPinCurrent.value = "";
-    els.adminPinNew.value = "";
-    renderAdminList();
-    setView("names");
+    askPin("PIN admin για Ονόματα / PIN.", () => {
+      els.adminSearch.value = "";
+      els.newName.value = "";
+      els.newShort.value = "";
+      els.newDayrate.checked = false;
+      els.adminPinCurrent.value = "";
+      els.adminPinNew.value = "";
+      renderAdminList();
+      setView("names");
+    });
   }
 
   function changePin() {
@@ -963,17 +964,16 @@
   }
 
   function openMonth() {
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    if (!els.monthPicker.value) els.monthPicker.value = ym;
-    renderMonth();
-    setView("month");
+    askPin("PIN admin για άνοιγμα Μήνα.", () => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      if (!els.monthPicker.value) els.monthPicker.value = ym;
+      renderMonth();
+      setView("month");
+    });
   }
 
-  function renderMonth() {
-    const ym = els.monthPicker.value;
-    els.monthBody.innerHTML = "";
-    if (!ym) return;
+  function collectMonthRows(ym) {
     const totals = {};
     Object.entries(state.days).forEach(([dateKey, day]) => {
       if (!dateKey.startsWith(ym)) return;
@@ -1003,10 +1003,19 @@
         }
       });
     });
+    return Object.values(totals)
+      .map((r) => ({
+        ...r,
+        hours: Math.round(r.hours * 100) / 100,
+      }))
+      .sort((a, b) => a.short.localeCompare(b.short, "el"));
+  }
 
-    const rows = Object.values(totals).sort((a, b) =>
-      a.short.localeCompare(b.short, "el")
-    );
+  function renderMonth() {
+    const ym = els.monthPicker.value;
+    els.monthBody.innerHTML = "";
+    if (!ym) return;
+    const rows = collectMonthRows(ym);
     if (!rows.length) {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td colspan="4">Καμία καταχώρηση για αυτόν τον μήνα σε αυτό το tablet.</td>`;
@@ -1018,11 +1027,97 @@
       tr.innerHTML = `
         <td>${escapeHtml(r.short)}<br><span style="color:var(--muted);font-size:0.85rem">${escapeHtml(r.name || "")}</span></td>
         <td>${r.days}</td>
-        <td>${r.hours ? formatHours(Math.round(r.hours * 100) / 100) : "—"}</td>
+        <td>${r.hours ? formatHours(r.hours) : "—"}</td>
         <td>${r.dayRates || "—"}</td>
       `;
       els.monthBody.appendChild(tr);
     });
+  }
+
+  function exportMonthPdf() {
+    const ym = els.monthPicker.value;
+    if (!ym) {
+      showToast("Διαλέξτε μήνα");
+      return;
+    }
+    const rows = collectMonthRows(ym);
+    els.printRoot.innerHTML = `
+      <h1>ΠΑΡΟΥΣΙΟΛΟΓΙΟ — STORE 311</h1>
+      <p>Σύνοψη μήνα ${escapeHtml(ym)}</p>
+      <table>
+        <thead>
+          <tr><th>Όνομα</th><th>Πλήρες</th><th>Ημέρες</th><th>Ώρες</th><th>Ημερομίσθια</th></tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (r) =>
+                `<tr><td>${escapeHtml(r.short)}</td><td>${escapeHtml(r.name || "")}</td><td>${r.days}</td><td>${r.hours || ""}</td><td>${r.dayRates || ""}</td></tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+    window.print();
+  }
+
+  function exportMonthExcel() {
+    const ym = els.monthPicker.value;
+    if (!ym) {
+      showToast("Διαλέξτε μήνα");
+      return;
+    }
+    const rows = collectMonthRows(ym);
+    const lines = [
+      "Όνομα;Πλήρες;Ημέρες;Ώρες;Ημερομίσθια",
+      ...rows.map(
+        (r) =>
+          `${csvCell(r.short)};${csvCell(r.name || "")};${r.days};${r.hours || ""};${r.dayRates || ""}`
+      ),
+    ];
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `parousiologio-month-${ym}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("Excel / CSV");
+  }
+
+  function csvCell(v) {
+    const s = String(v ?? "");
+    if (/[;"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  function emailMonth() {
+    const ym = els.monthPicker.value;
+    if (!ym) {
+      showToast("Διαλέξτε μήνα");
+      return;
+    }
+    const rows = collectMonthRows(ym);
+    const lines = [
+      `ΠΑΡΟΥΣΙΟΛΟΓΙΟ STORE 311 — μήνας ${ym}`,
+      "",
+      ...rows.map(
+        (r) =>
+          `${r.short}: ημέρες ${r.days}, ώρες ${r.hours || "—"}, ημερομ. ${r.dayRates || "—"}`
+      ),
+      "",
+      "Σημείωση: mailto μόνο — όχι αυτόματη αποστολή χωρίς server.",
+    ];
+    const subject = encodeURIComponent(`Παρουσιολόγιο μήνας ${ym} — STORE 311`);
+    let body = encodeURIComponent(lines.join("\n"));
+    if (body.length > 1800) {
+      body = encodeURIComponent(
+        lines.slice(0, 40).join("\n") + "\n\n(κομμένο — χρησιμοποιήστε Excel/PDF)"
+      );
+    }
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    showToast("Άνοιγμα email…");
   }
 
   function updateClocks() {
@@ -1253,6 +1348,10 @@
   els.personNotes.addEventListener("change", persistNotes);
   els.personNotes.addEventListener("blur", persistNotes);
   els.monthPicker.addEventListener("change", renderMonth);
+  els.btnMonthPdf.addEventListener("click", exportMonthPdf);
+  els.btnMonthExcel.addEventListener("click", exportMonthExcel);
+  els.btnMonthEmail.addEventListener("click", emailMonth);
+  els.btnMonthEmail2.addEventListener("click", emailMonth);
 
   window.__DEMO__ = {
     state,
