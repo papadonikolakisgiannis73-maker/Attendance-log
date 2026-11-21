@@ -758,18 +758,20 @@
   }
 
   function clearDay() {
-    if (
-      !confirm(
-        "Καθαρισμός ημέρας; Θα σβηστούν όλα τα ονόματα και οι ώρες αυτής της ημέρας σε αυτό το tablet."
-      )
-    ) {
-      return;
-    }
-    state.slots = {};
-    save();
-    renderBoard();
-    showToast("Η ημέρα καθαρίστηκε");
-    updateContinueVisibility();
+    askPin("PIN admin για καθαρισμό ημέρας.", () => {
+      if (
+        !confirm(
+          "Καθαρισμός ημέρας; Θα σβηστούν όλα τα ονόματα και οι ώρες αυτής της ημέρας σε αυτό το tablet."
+        )
+      ) {
+        return;
+      }
+      state.slots = {};
+      save();
+      renderBoard();
+      showToast("Η ημέρα καθαρίστηκε");
+      updateContinueVisibility();
+    });
   }
 
   function renderBoard() {
