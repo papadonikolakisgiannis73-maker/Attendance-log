@@ -16,8 +16,7 @@
     { id: "bar", title: "Bar", slots: 4, depts: ["ΜΠΟΥΦΕ-ΜΠΑΡ"] },
     { id: "fota", title: "Φώτα", slots: 2, depts: ["ΥΠΟΔΟΧΗ", "ΜΠΟΥΦΕ-ΜΠΑΡ", "ΑΛΛΟ"] },
     { id: "check", title: "Check", slots: 2, depts: ["ΥΠΟΔΟΧΗ"] },
-    { id: "ypeyth", title: "Υπεύθ. βάρδιας", slots: 1, depts: ["ΥΠΕΥΘΥΝΟΙ"] },
-    { id: "klados", title: "Κλάδος", slots: 1, depts: ["ΥΠΕΥΘΥΝΟΙ"] },
+    { id: "ypeyth", title: "Υπεύθ. βάρδιας", slots: 4, depts: ["ΥΠΕΥΘΥΝΟΙ"] },
   ];
 
   const DEPTS = [
