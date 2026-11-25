@@ -974,41 +974,101 @@
     });
   }
 
+  function formatDayMonth(dateKey) {
+    const parts = String(dateKey || "").split("-");
+    if (parts.length < 3) return dateKey || "";
+    return `${Number(parts[2])}/${Number(parts[1])}`;
+  }
+
+  function formatHoursBreakdown(h) {
+    if (h == null) return "—";
+    const whole = Math.floor(h);
+    const mins = Math.round((h - whole) * 60);
+    if (mins === 0) return `${whole} ώρες`;
+    return `${whole}:${String(mins).padStart(2, "0")} ώρες`;
+  }
+
   function collectMonthRows(ym) {
     const totals = {};
     Object.entries(state.days).forEach(([dateKey, day]) => {
       if (!dateKey.startsWith(ym)) return;
+      // One stamp group per employee per calendar day (merge multi-slot same day).
+      const byEmp = {};
       Object.values(day.slots || {}).forEach((slot) => {
         if (!slot || !slot.empId) return;
-        if (!totals[slot.empId]) {
-          totals[slot.empId] = {
+        if (!byEmp[slot.empId]) {
+          byEmp[slot.empId] = {
             short: slot.short,
             name: slot.name,
-            days: 0,
             hours: 0,
-            dayRates: 0,
+            dayRate: false,
+            stamped: false,
           };
         }
-        const row = totals[slot.empId];
+        const e = byEmp[slot.empId];
+        e.short = slot.short || e.short;
+        e.name = slot.name || e.name;
         if (slot.dayRate) {
-          row.dayRates += 1;
-          row.days += 1;
+          e.dayRate = true;
+          e.stamped = true;
         } else {
           const h = calcHours(slot.arrival, slot.departure);
           if (h != null && h > 0) {
-            row.hours += h;
-            row.days += 1;
+            e.hours += h;
+            e.stamped = true;
           } else if (slot.arrival || slot.departure) {
-            row.days += 1;
+            e.stamped = true;
+          }
+        }
+      });
+
+      Object.entries(byEmp).forEach(([empId, dayEmp]) => {
+        if (!dayEmp.stamped) return;
+        if (!totals[empId]) {
+          totals[empId] = {
+            short: dayEmp.short,
+            name: dayEmp.name,
+            days: 0,
+            hours: 0,
+            dayRates: 0,
+            dayParts: [],
+          };
+        }
+        const row = totals[empId];
+        row.short = dayEmp.short || row.short;
+        row.name = dayEmp.name || row.name;
+        row.days += 1;
+        const dm = formatDayMonth(dateKey);
+        if (dayEmp.dayRate) {
+          row.dayRates += 1;
+          row.dayParts.push({ dateKey, dm, label: "1 ημέρα" });
+        } else {
+          const h = Math.round(dayEmp.hours * 100) / 100;
+          if (h > 0) {
+            row.hours += h;
+            row.dayParts.push({
+              dateKey,
+              dm,
+              label: formatHoursBreakdown(h),
+            });
+          } else {
+            row.dayParts.push({ dateKey, dm, label: "—" });
           }
         }
       });
     });
     return Object.values(totals)
-      .map((r) => ({
-        ...r,
-        hours: Math.round(r.hours * 100) / 100,
-      }))
+      .map((r) => {
+        const dayParts = r.dayParts
+          .slice()
+          .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+        return {
+          ...r,
+          hours: Math.round(r.hours * 100) / 100,
+          dayParts,
+          dayBreakdown: dayParts.map((p) => `${p.dm} ${p.label}`).join(", "),
+        };
+      })
       .sort((a, b) => a.short.localeCompare(b.short, "el"));
   }
 
@@ -1019,7 +1079,7 @@
     const rows = collectMonthRows(ym);
     if (!rows.length) {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td colspan="4">Καμία καταχώρηση για αυτόν τον μήνα σε αυτό το tablet.</td>`;
+      tr.innerHTML = `<td colspan="5">Καμία καταχώρηση για αυτόν τον μήνα σε αυτό το tablet.</td>`;
       els.monthBody.appendChild(tr);
       return;
     }
@@ -1030,6 +1090,7 @@
         <td>${r.days}</td>
         <td>${r.hours ? formatHours(r.hours) : "—"}</td>
         <td>${r.dayRates || "—"}</td>
+        <td style="font-size:0.85rem;max-width:14rem">${escapeHtml(r.dayBreakdown || "—")}</td>
       `;
       els.monthBody.appendChild(tr);
     });
@@ -1047,13 +1108,13 @@
       <p>Σύνοψη μήνα ${escapeHtml(ym)}</p>
       <table>
         <thead>
-          <tr><th>Όνομα</th><th>Πλήρες</th><th>Ημέρες</th><th>Ώρες</th><th>Ημερομίσθια</th></tr>
+          <tr><th>Όνομα</th><th>Πλήρες</th><th>Ημέρες</th><th>Ώρες</th><th>Ημερομίσθια</th><th>Ανά ημέρα</th></tr>
         </thead>
         <tbody>
           ${rows
             .map(
               (r) =>
-                `<tr><td>${escapeHtml(r.short)}</td><td>${escapeHtml(r.name || "")}</td><td>${r.days}</td><td>${r.hours || ""}</td><td>${r.dayRates || ""}</td></tr>`
+                `<tr><td>${escapeHtml(r.short)}</td><td>${escapeHtml(r.name || "")}</td><td>${r.days}</td><td>${r.hours || ""}</td><td>${r.dayRates || ""}</td><td>${escapeHtml(r.dayBreakdown || "")}</td></tr>`
             )
             .join("")}
         </tbody>
@@ -1070,10 +1131,10 @@
     }
     const rows = collectMonthRows(ym);
     const lines = [
-      "Όνομα;Πλήρες;Ημέρες;Ώρες;Ημερομίσθια",
+      "Όνομα;Πλήρες;Ημέρες;Ώρες;Ημερομίσθια;Ανά ημέρα",
       ...rows.map(
         (r) =>
-          `${csvCell(r.short)};${csvCell(r.name || "")};${r.days};${r.hours || ""};${r.dayRates || ""}`
+          `${csvCell(r.short)};${csvCell(r.name || "")};${r.days};${r.hours || ""};${r.dayRates || ""};${csvCell(r.dayBreakdown || "")}`
       ),
     ];
     const blob = new Blob(["\uFEFF" + lines.join("\n")], {
@@ -1103,10 +1164,16 @@
     const lines = [
       `ΠΑΡΟΥΣΙΟΛΟΓΙΟ STORE 311 — μήνας ${ym}`,
       "",
-      ...rows.map(
-        (r) =>
-          `${r.short}: ημέρες ${r.days}, ώρες ${r.hours || "—"}, ημερομ. ${r.dayRates || "—"}`
-      ),
+      ...rows.map((r) => {
+        const total =
+          r.hours > 0
+            ? `σύνολο ${formatHoursBreakdown(r.hours)}`
+            : r.dayRates > 0
+              ? `ημερομ. ${r.dayRates}`
+              : `ημέρες ${r.days}`;
+        const detail = r.dayBreakdown ? ` — ${r.dayBreakdown}` : "";
+        return `${r.short}: ${total}${detail}`;
+      }),
       "",
       "Σημείωση: mailto μόνο — όχι αυτόματη αποστολή χωρίς server.",
     ];

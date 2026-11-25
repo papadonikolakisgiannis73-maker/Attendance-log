@@ -1,4 +1,4 @@
-const CACHE = "parousiologio-tablet-r4-v3";
+const CACHE = "parousiologio-tablet-r4-v4";
 const PRECACHE = [
   "./",
   "./index.html",
