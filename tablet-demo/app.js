@@ -1,7 +1,12 @@
 (() => {
+  // Stable data keys — never rename/bump these on SW/cache updates (r4-vN etc.).
+  // Cache version bumps must only refresh the app shell, never wipe attendance.
   const STORAGE_KEY = "parousiologio-offline-demo-v2";
   const LEGACY_KEY = "parousiologio-offline-demo-v1";
   const ROSTER_KEY = "parousiologio-offline-roster-v1";
+  const IDB_NAME = "parousiologio-offline-db";
+  const IDB_STORE = "kv";
+  const IDB_BACKUP_KEY = "full-backup-v1";
   const DEFAULT_PIN = "3111";
   const FREE_MANUAL_EDITS = 2;
   const DAYRATE_DEPTS = new Set(["DJ", "ΥΠΕΥΘΥΝΟΙ"]);
@@ -148,6 +153,7 @@
     adminPinCurrent: document.getElementById("admin-pin-current"),
     adminPinNew: document.getElementById("admin-pin-new"),
     btnChangePin: document.getElementById("btn-change-pin"),
+    btnBackupRaw: document.getElementById("btn-backup-raw"),
     newName: document.getElementById("new-name"),
     newShort: document.getElementById("new-short"),
     newDept: document.getElementById("new-dept"),
@@ -264,78 +270,279 @@
   }
 
   function loadDayIntoState(key) {
-    const day = state.days[key] || emptyDay();
+    if (!state.days[key]) state.days[key] = emptyDay();
+    const day = state.days[key];
     state.dateKey = key;
     state.slots = day.slots || {};
+    day.slots = state.slots;
     state.lateEntry = !!day.lateEntry;
   }
 
-  function save() {
+  function attendancePayload() {
     persistCurrentDayIntoHistory();
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        currentDateKey: state.dateKey,
-        days: state.days,
-      })
+    return {
+      currentDateKey: state.dateKey,
+      days: state.days,
+    };
+  }
+
+  function rosterPayload() {
+    return {
+      customEmployees: state.customEmployees,
+      deactivatedIds: state.deactivatedIds,
+      pin: state.pin,
+    };
+  }
+
+  function fullBackupPayload() {
+    return {
+      version: 1,
+      store: "STORE 311",
+      savedAt: new Date().toISOString(),
+      attendance: attendancePayload(),
+      roster: rosterPayload(),
+    };
+  }
+
+  function countStampedSlots(days) {
+    if (!days || typeof days !== "object") return 0;
+    let n = 0;
+    Object.values(days).forEach((day) => {
+      Object.values((day && day.slots) || {}).forEach((slot) => {
+        if (!slot) return;
+        if (slot.empId || slot.arrival || slot.departure || slot.dayRate) n += 1;
+      });
+    });
+    return n;
+  }
+
+  function safeParseJson(raw) {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeLocalAttendance(payload) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }
+
+  function writeLocalRoster(payload) {
+    localStorage.setItem(ROSTER_KEY, JSON.stringify(payload));
+  }
+
+  function openIdb() {
+    return new Promise((resolve, reject) => {
+      if (!("indexedDB" in window)) {
+        reject(new Error("no-idb"));
+        return;
+      }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error("idb-open-failed"));
+    });
+  }
+
+  function idbGet(key) {
+    return openIdb().then(
+      (db) =>
+        new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE, "readonly");
+          const store = tx.objectStore(IDB_STORE);
+          const req = store.get(key);
+          req.onsuccess = () => {
+            db.close();
+            resolve(req.result || null);
+          };
+          req.onerror = () => {
+            db.close();
+            reject(req.error);
+          };
+        })
     );
+  }
+
+  function idbSet(key, value) {
+    return openIdb().then(
+      (db) =>
+        new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE, "readwrite");
+          const store = tx.objectStore(IDB_STORE);
+          const req = store.put(value, key);
+          req.onsuccess = () => {
+            db.close();
+            resolve();
+          };
+          req.onerror = () => {
+            db.close();
+            reject(req.error);
+          };
+        })
+    );
+  }
+
+  function mirrorBackupToIdb() {
+    // Always mirror the current in-memory truth after an explicit save.
+    // Boot recovery (load) prefers the richer of localStorage vs IDB instead.
+    return idbSet(IDB_BACKUP_KEY, fullBackupPayload()).catch(() => null);
+  }
+
+  function requestPersistentStorage() {
+    try {
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(() => {});
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function save() {
+    const payload = attendancePayload();
+    try {
+      writeLocalAttendance(payload);
+    } catch (_) {
+      showToast("Αποθήκευση localStorage απέτυχε — δοκιμάστε αντίγραφο JSON");
+    }
+    mirrorBackupToIdb();
   }
 
   function saveRoster() {
-    localStorage.setItem(
-      ROSTER_KEY,
-      JSON.stringify({
-        customEmployees: state.customEmployees,
-        deactivatedIds: state.deactivatedIds,
-        pin: state.pin,
-      })
-    );
+    const payload = rosterPayload();
+    try {
+      writeLocalRoster(payload);
+    } catch (_) {
+      showToast("Αποθήκευση ονομάτων απέτυχε");
+    }
+    mirrorBackupToIdb();
   }
 
-  function load() {
+  function applyAttendanceData(data) {
+    if (!data || !data.days || typeof data.days !== "object") return false;
+    state.days = data.days;
+    const key = data.currentDateKey || todayKey();
+    loadDayIntoState(key);
+    return true;
+  }
+
+  function applyRosterData(data) {
+    if (!data || typeof data !== "object") return false;
+    state.customEmployees = Array.isArray(data.customEmployees)
+      ? data.customEmployees
+      : [];
+    state.deactivatedIds = Array.isArray(data.deactivatedIds)
+      ? data.deactivatedIds
+      : [];
+    if (data.pin) state.pin = String(data.pin);
+    return true;
+  }
+
+  function readLocalAttendance() {
+    const data = safeParseJson(localStorage.getItem(STORAGE_KEY));
+    if (data && data.days) return data;
+    const legacy = safeParseJson(localStorage.getItem(LEGACY_KEY));
+    if (legacy && legacy.dateKey && legacy.slots) {
+      return {
+        currentDateKey: legacy.dateKey,
+        days: {
+          [legacy.dateKey]: { slots: legacy.slots, lateEntry: false },
+        },
+      };
+    }
+    return null;
+  }
+
+  function readLocalRoster() {
+    const data = safeParseJson(localStorage.getItem(ROSTER_KEY));
+    return data && typeof data === "object" ? data : null;
+  }
+
+  async function load() {
+    requestPersistentStorage();
+    let attendance = readLocalAttendance();
+    let roster = readLocalRoster();
+    let idbBackup = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        if (data && data.days) {
-          state.days = data.days;
-          const key = data.currentDateKey || todayKey();
-          loadDayIntoState(key);
-        }
-      } else {
-        const legacy = localStorage.getItem(LEGACY_KEY);
-        if (legacy) {
-          const data = JSON.parse(legacy);
-          if (data && data.dateKey && data.slots) {
-            state.days[data.dateKey] = {
-              slots: data.slots,
-              lateEntry: false,
-            };
-            loadDayIntoState(data.dateKey);
-            save();
-          }
-        }
+      idbBackup = await idbGet(IDB_BACKUP_KEY);
+    } catch (_) {
+      idbBackup = null;
+    }
+
+    const lsCount = countStampedSlots(attendance && attendance.days);
+    const idbCount = countStampedSlots(
+      idbBackup && idbBackup.attendance && idbBackup.attendance.days
+    );
+
+    // Prefer the richer copy so a wiped/empty localStorage can recover from IDB.
+    if ((!attendance || lsCount === 0) && idbBackup && idbBackup.attendance && idbCount > 0) {
+      attendance = idbBackup.attendance;
+      try {
+        writeLocalAttendance(attendance);
+      } catch (_) {
+        /* still use in-memory */
       }
+    } else if (attendance && idbCount > lsCount) {
+      attendance = idbBackup.attendance;
+      try {
+        writeLocalAttendance(attendance);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    if ((!roster || (!roster.customEmployees && !roster.pin)) && idbBackup && idbBackup.roster) {
+      roster = idbBackup.roster;
+      try {
+        writeLocalRoster(roster);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    if (attendance) applyAttendanceData(attendance);
+    if (roster) applyRosterData(roster);
+
+    // Ensure both stores hold the recovered truth after boot.
+    try {
+      writeLocalAttendance(attendancePayload());
+      writeLocalRoster(rosterPayload());
     } catch (_) {
       /* ignore */
     }
+    await mirrorBackupToIdb();
+  }
+
+  function exportRawBackup() {
+    const backup = fullBackupPayload();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `parousiologio-backup-${todayKey()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("Αντίγραφο JSON αποθηκεύτηκε");
+  }
+
+  function flushPersist() {
     try {
-      const raw = localStorage.getItem(ROSTER_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        if (data) {
-          state.customEmployees = Array.isArray(data.customEmployees)
-            ? data.customEmployees
-            : [];
-          state.deactivatedIds = Array.isArray(data.deactivatedIds)
-            ? data.deactivatedIds
-            : [];
-          if (data.pin) state.pin = String(data.pin);
-        }
-      }
+      persistNotesIfNeeded();
+      const payload = attendancePayload();
+      writeLocalAttendance(payload);
+      writeLocalRoster(rosterPayload());
     } catch (_) {
       /* ignore */
     }
+    mirrorBackupToIdb();
   }
 
   function isDayRateEligible(empOrSlot) {
@@ -1241,7 +1448,7 @@
     els.printRoot.innerHTML = `
       <h1>ΠΑΡΟΥΣΙΟΛΟΓΙΟ — STORE 311</h1>
       <p>${formatLongDate(state.dateKey)}</p>
-      <p>${state.lateEntry ? "Εκπρόθεσμη καταχώρηση · " : ""}Αποθήκευση: localStorage σε αυτό το tablet</p>
+      <p>${state.lateEntry ? "Εκπρόθεσμη καταχώρηση · " : ""}Αποθήκευση: localStorage + IndexedDB σε αυτό το tablet</p>
       <table>
         <thead>
           <tr><th>Πόστο</th><th>Όνομα</th><th>Άφιξη</th><th>Αποχώρηση</th><th>Ώρες / 1</th><th>Σημειώσεις</th></tr>
@@ -1273,7 +1480,7 @@
       dateKey: state.dateKey,
       lateEntry: !!state.lateEntry,
       exportedAt: new Date().toISOString(),
-      storage: "localStorage on this tablet only",
+      storage: "localStorage + IndexedDB mirror on this tablet",
       entries: collectDayRows(),
     };
   }
@@ -1356,70 +1563,79 @@
     });
   }
 
-  load();
-  fillDeptSelect();
-  updateClocks();
-  updateContinueVisibility();
-  registerPwa();
-  setInterval(updateClocks, 1000);
+  function bindUi() {
+    fillDeptSelect();
+    updateClocks();
+    updateContinueVisibility();
+    registerPwa();
+    setInterval(updateClocks, 1000);
 
-  els.btnToday.addEventListener("click", startToday);
-  els.btnContinue.addEventListener("click", continueDay);
-  els.btnOtherDay.addEventListener("click", openDateSheet);
-  els.btnMonth.addEventListener("click", openMonth);
-  els.btnNames.addEventListener("click", openNames);
-  els.btnBackHome.addEventListener("click", goHome);
-  els.btnBackHome2.addEventListener("click", goHome);
-  els.btnBackNames.addEventListener("click", goHome);
-  els.btnBackMonth.addEventListener("click", goHome);
-  els.btnBackDay.addEventListener("click", () => {
-    persistNotes();
-    showDayScreen();
-  });
-  els.btnArrive.addEventListener("click", stampArrive);
-  els.btnLeave.addEventListener("click", stampLeave);
-  els.btnEditArrive.addEventListener("click", () => openTimePicker("arrival"));
-  els.btnEditLeave.addEventListener("click", () => openTimePicker("departure"));
-  els.btnDayrate.addEventListener("click", toggleDayRate);
-  els.btnChangeName.addEventListener("click", changeName);
-  els.btnRemove.addEventListener("click", removePerson);
-  els.btnClosePicker.addEventListener("click", closePicker);
-  els.picker.addEventListener("click", (e) => {
-    if (e.target === els.picker) closePicker();
-  });
-  els.pickerSearch.addEventListener("input", renderNameList);
-  els.btnCloseTime.addEventListener("click", closeTimePicker);
-  els.btnClearTime.addEventListener("click", clearTimeField);
-  els.timePicker.addEventListener("click", (e) => {
-    if (e.target === els.timePicker) closeTimePicker();
-  });
-  els.btnCloseDate.addEventListener("click", closeDateSheet);
-  els.datePicker.addEventListener("click", (e) => {
-    if (e.target === els.datePicker) closeDateSheet();
-  });
-  els.btnOpenDate.addEventListener("click", openSelectedDate);
-  els.btnClosePin.addEventListener("click", closePin);
-  els.pinOverlay.addEventListener("click", (e) => {
-    if (e.target === els.pinOverlay) closePin();
-  });
-  els.btnPinOk.addEventListener("click", submitPin);
-  els.pinInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitPin();
-  });
-  els.btnPrint.addEventListener("click", printDay);
-  els.btnExport.addEventListener("click", exportDayJson);
-  els.btnEmail.addEventListener("click", emailDay);
-  els.btnClearDay.addEventListener("click", clearDay);
-  els.btnAddName.addEventListener("click", addEmployee);
-  els.btnChangePin.addEventListener("click", changePin);
-  els.adminSearch.addEventListener("input", renderAdminList);
-  els.personNotes.addEventListener("change", persistNotes);
-  els.personNotes.addEventListener("blur", persistNotes);
-  els.monthPicker.addEventListener("change", renderMonth);
-  els.btnMonthPdf.addEventListener("click", exportMonthPdf);
-  els.btnMonthExcel.addEventListener("click", exportMonthExcel);
-  els.btnMonthEmail.addEventListener("click", emailMonth);
-  els.btnMonthEmail2.addEventListener("click", emailMonth);
+    els.btnToday.addEventListener("click", startToday);
+    els.btnContinue.addEventListener("click", continueDay);
+    els.btnOtherDay.addEventListener("click", openDateSheet);
+    els.btnMonth.addEventListener("click", openMonth);
+    els.btnNames.addEventListener("click", openNames);
+    els.btnBackHome.addEventListener("click", goHome);
+    els.btnBackHome2.addEventListener("click", goHome);
+    els.btnBackNames.addEventListener("click", goHome);
+    els.btnBackMonth.addEventListener("click", goHome);
+    els.btnBackDay.addEventListener("click", () => {
+      persistNotes();
+      showDayScreen();
+    });
+    els.btnArrive.addEventListener("click", stampArrive);
+    els.btnLeave.addEventListener("click", stampLeave);
+    els.btnEditArrive.addEventListener("click", () => openTimePicker("arrival"));
+    els.btnEditLeave.addEventListener("click", () => openTimePicker("departure"));
+    els.btnDayrate.addEventListener("click", toggleDayRate);
+    els.btnChangeName.addEventListener("click", changeName);
+    els.btnRemove.addEventListener("click", removePerson);
+    els.btnClosePicker.addEventListener("click", closePicker);
+    els.picker.addEventListener("click", (e) => {
+      if (e.target === els.picker) closePicker();
+    });
+    els.pickerSearch.addEventListener("input", renderNameList);
+    els.btnCloseTime.addEventListener("click", closeTimePicker);
+    els.btnClearTime.addEventListener("click", clearTimeField);
+    els.timePicker.addEventListener("click", (e) => {
+      if (e.target === els.timePicker) closeTimePicker();
+    });
+    els.btnCloseDate.addEventListener("click", closeDateSheet);
+    els.datePicker.addEventListener("click", (e) => {
+      if (e.target === els.datePicker) closeDateSheet();
+    });
+    els.btnOpenDate.addEventListener("click", openSelectedDate);
+    els.btnClosePin.addEventListener("click", closePin);
+    els.pinOverlay.addEventListener("click", (e) => {
+      if (e.target === els.pinOverlay) closePin();
+    });
+    els.btnPinOk.addEventListener("click", submitPin);
+    els.pinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submitPin();
+    });
+    els.btnPrint.addEventListener("click", printDay);
+    els.btnExport.addEventListener("click", exportDayJson);
+    els.btnEmail.addEventListener("click", emailDay);
+    els.btnClearDay.addEventListener("click", clearDay);
+    els.btnAddName.addEventListener("click", addEmployee);
+    els.btnChangePin.addEventListener("click", changePin);
+    if (els.btnBackupRaw) {
+      els.btnBackupRaw.addEventListener("click", exportRawBackup);
+    }
+    els.adminSearch.addEventListener("input", renderAdminList);
+    els.personNotes.addEventListener("change", persistNotes);
+    els.personNotes.addEventListener("blur", persistNotes);
+    els.monthPicker.addEventListener("change", renderMonth);
+    els.btnMonthPdf.addEventListener("click", exportMonthPdf);
+    els.btnMonthExcel.addEventListener("click", exportMonthExcel);
+    els.btnMonthEmail.addEventListener("click", emailMonth);
+    els.btnMonthEmail2.addEventListener("click", emailMonth);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushPersist();
+    });
+    window.addEventListener("pagehide", flushPersist);
+  }
 
   window.__DEMO__ = {
     state,
@@ -1433,5 +1649,11 @@
     calcHours,
     formatHours,
     allEmployees,
+    exportRawBackup,
+    flushPersist,
   };
+
+  load()
+    .catch(() => null)
+    .then(() => bindUi());
 })();

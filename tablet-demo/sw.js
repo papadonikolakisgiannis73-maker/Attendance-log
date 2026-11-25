@@ -1,4 +1,7 @@
-const CACHE = "parousiologio-tablet-r4-v4";
+// App-shell cache only. Bumping CACHE must NEVER clear localStorage / IndexedDB
+// attendance keys (parousiologio-offline-demo-v2, roster, IDB full-backup-v1).
+const CACHE_PREFIX = "parousiologio-tablet-";
+const CACHE = "parousiologio-tablet-r4-v5";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -21,7 +24,13 @@ self.addEventListener("activate", (e) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+        Promise.all(
+          keys
+            // Only drop old tablet app-shell caches. Never touch other origin caches
+            // or any user data stores (localStorage / IndexedDB are not Cache API).
+            .filter((k) => k.startsWith(CACHE_PREFIX) && k !== CACHE)
+            .map((k) => caches.delete(k))
+        )
       )
       .then(() => self.clients.claim())
   );
@@ -30,6 +39,32 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
+
+  // Network-first for HTML/JS/CSS so shell updates land; cache fallback for offline.
+  // Attendance data lives in localStorage/IndexedDB — not in these responses.
+  const isShell =
+    e.request.mode === "navigate" ||
+    /\.(?:html|js|css|json)$/i.test(url.pathname) ||
+    url.pathname.endsWith("/tablet-demo/") ||
+    url.pathname.endsWith("/tablet-demo");
+
+  if (isShell) {
+    e.respondWith(
+      fetch(e.request)
+        .then((resp) => {
+          if (resp && resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, clone));
+          }
+          return resp;
+        })
+        .catch(() =>
+          caches.match(e.request).then((cached) => cached || caches.match("./index.html"))
+        )
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(
       (cached) =>

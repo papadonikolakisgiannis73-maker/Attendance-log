@@ -155,7 +155,8 @@
           <span style="width: 52px"></span>
         </div>
         <p class="storage-note" style="margin: 0">
-          Προσθέστε ή απενεργοποιήστε ονόματα. Οι αλλαγές μένουν σε αυτό το tablet (localStorage).
+          Προσθέστε ή απενεργοποιήστε ονόματα. Οι ημέρες, ώρες, ονόματα και PIN μένουν αυτόματα σε αυτό το tablet
+          (<strong>localStorage + αντίγραφο IndexedDB</strong>) και δεν σβήνονται από refresh ή ενημέρωση εφαρμογής.
         </p>
         <div class="field-stack admin-pin-box">
           <div>
@@ -166,7 +167,8 @@
             <input class="field-input" id="admin-pin-new" type="password" inputmode="numeric" placeholder="Νέο PIN (π.χ. 3111)" autocomplete="off" />
           </div>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-change-pin">Αποθήκευση PIN</button>
-          <p class="sheet-sub">Προεπιλογή: 3111 — μετά από 2 δωρεάν διορθώσεις ώρας / άνοιγμα Μήνα, Ονομάτων, άλλης ημερομηνίας.</p>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-backup-raw">Αντίγραφο δεδομένων (JSON)</button>
+          <p class="sheet-sub">Προεπιλογή PIN: 3111. Προαιρετικά κατεβάστε πλήρες JSON αντίγραφο (όλες οι ημέρες + ονόματα) για έξτρα ασφάλεια.</p>
         </div>
         <div class="field-stack">
           <div>
