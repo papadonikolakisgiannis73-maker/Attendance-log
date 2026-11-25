@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="el">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f4f7f0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>ΠΑΡΟΥΣΙΟΛΟΓΙΟ — Le Jardin</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- HOME -->
+      <section id="screen-home" class="screen active" aria-label="Αρχική">
+        <header class="brand">
+          <span class="brand-store">Le Jardin</span>
+          <h1 class="brand-title">ΠΑΡΟΥΣΙΟΛΟΓΙΟ</h1>
+        </header>
+
+        <div class="home-clock">
+          <div class="home-date" id="home-date">—</div>
+          <div class="home-time" id="home-time">—</div>
+          <p class="home-hint">Η ώρα έρχεται από το ρολόι του tablet.</p>
+        </div>
+
+        <div class="cta-stack">
+          <button type="button" class="btn btn-primary" id="btn-today">ΣΗΜΕΡΑ</button>
+          <button type="button" class="btn btn-ghost" id="btn-continue" hidden>
+            Συνέχεια σημερινής
+          </button>
+          <button type="button" class="btn btn-ghost" id="btn-other-day">Άλλη ημερομηνία…</button>
+          <button type="button" class="btn btn-ghost" id="btn-month">Μήνας</button>
+          <button type="button" class="btn btn-ghost" id="btn-names">Ονόματα / PIN</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-install" hidden>
+            Εγκατάσταση εφαρμογής
+          </button>
+        </div>
+      </section>
+
+      <!-- DAY BOARD -->
+      <section id="screen-day" class="screen" aria-label="Ημέρα">
+        <div class="topbar">
+          <button type="button" class="icon-btn" id="btn-back-home" aria-label="Αρχική">←</button>
+          <h1>Ημέρα</h1>
+          <button type="button" class="icon-btn" id="btn-email" aria-label="Email" title="Email">✉</button>
+          <button type="button" class="icon-btn" id="btn-export" aria-label="Εξαγωγή JSON" title="Εξαγωγή">⬇</button>
+          <button type="button" class="icon-btn" id="btn-print" aria-label="Εκτύπωση">⎙</button>
+        </div>
+        <div class="day-meta">
+          <strong id="day-date">—</strong>
+          <span id="day-clock">—</span>
+        </div>
+        <p class="late-banner" id="late-banner" hidden>Εκπρόθεσμη καταχώρηση</p>
+        <p class="mailto-note">
+          ✉ ανοίγει το email του tablet (mailto) — όχι αυτόματη αποστολή χωρίς server.
+        </p>
+        <div class="board" id="board"></div>
+        <div class="fab-bar">
+          <button type="button" class="btn btn-ghost" id="btn-clear-day">Καθαρισμός</button>
+          <button type="button" class="btn btn-primary" id="btn-back-home-2">Αρχική</button>
+        </div>
+      </section>
+
+      <!-- PERSON -->
+      <section id="screen-person" class="screen" aria-label="Άτομο">
+        <div class="topbar">
+          <button type="button" class="icon-btn" id="btn-back-day" aria-label="Πίσω">←</button>
+          <h1>Ώρες</h1>
+          <span style="width: 52px"></span>
+        </div>
+
+        <div class="person-hero">
+          <div class="post-label" id="person-post" hidden></div>
+          <h2 id="person-name">—</h2>
+          <div class="dept" id="person-dept">—</div>
+          <button type="button" class="btn btn-ghost btn-change-name" id="btn-change-name">
+            Αλλαγή ονόματος
+          </button>
+        </div>
+
+        <div class="dayrate-panel" id="dayrate-panel" hidden>
+          <button type="button" class="btn btn-primary" id="btn-dayrate">
+            Ημερομίσθιο (1)
+          </button>
+          <p class="sheet-sub dayrate-helper" id="dayrate-status">ΑΝ ΕΙΣΑΙ ΗΜΕΡΟΜΙΣΘΙΟ</p>
+        </div>
+
+        <div class="time-block" id="clock-block">
+          <button type="button" class="stamp-btn stamp-arrive" id="btn-arrive">
+            ΑΦΙΞΗ
+            <small>τώρα από το ρολόι</small>
+          </button>
+          <button type="button" class="time-chip" id="btn-edit-arrive" aria-label="Επεξεργασία άφιξης">
+            <span class="time-chip-label">Ώρα άφιξης</span>
+            <span class="time-chip-value" id="person-arrive">—</span>
+            <span class="time-chip-hint">πάτησε για διόρθωση</span>
+          </button>
+        </div>
+
+        <div class="time-block" id="clock-block-leave">
+          <button type="button" class="stamp-btn stamp-leave" id="btn-leave">
+            ΑΠΟΧΩΡΗΣΗ
+            <small>τώρα από το ρολόι</small>
+          </button>
+          <button type="button" class="time-chip" id="btn-edit-leave" aria-label="Επεξεργασία αποχώρησης">
+            <span class="time-chip-label">Ώρα αποχώρησης</span>
+            <span class="time-chip-value" id="person-leave">—</span>
+            <span class="time-chip-hint">πάτησε για διόρθωση</span>
+          </button>
+        </div>
+
+        <p class="pin-hint" id="pin-hint">
+          2 δωρεάν χειροκίνητες διορθώσεις ώρας ανά άτομο· μετά χρειάζεται PIN admin.
+        </p>
+
+        <div class="hours-panel">
+          <div class="label" id="hours-label">Σύνολο ωρών (και overnight)</div>
+          <div class="value" id="person-hours">—</div>
+        </div>
+
+        <div class="notes-panel">
+          <label class="field-label" for="person-notes">Σημειώσεις</label>
+          <textarea
+            class="notes-input"
+            id="person-notes"
+            rows="3"
+            placeholder="Π.χ. αντικατάσταση, καθυστέρηση…"
+          ></textarea>
+        </div>
+
+        <div class="cta-stack">
+          <button type="button" class="btn btn-danger" id="btn-remove">Αφαίρεση από λίστα</button>
+        </div>
+      </section>
+
+      <!-- NAMES ADMIN -->
+      <section id="screen-names" class="screen" aria-label="Ονόματα">
+        <div class="topbar">
+          <button type="button" class="icon-btn" id="btn-back-names" aria-label="Αρχική">←</button>
+          <h1>Ονόματα / PIN</h1>
+          <span style="width: 52px"></span>
+        </div>
+        <p class="storage-note" style="margin: 0">
+          Προσθέστε ή απενεργοποιήστε ονόματα. Οι ημέρες, ώρες, ονόματα και PIN μένουν αυτόματα σε αυτό το tablet
+          (<strong>localStorage + αντίγραφο IndexedDB</strong>) και δεν σβήνονται από refresh ή ενημέρωση εφαρμογής.
+        </p>
+        <div class="field-stack admin-pin-box">
+          <div>
+            <label class="field-label" for="admin-pin-current">Αλλαγή PIN admin</label>
+            <input class="field-input" id="admin-pin-current" type="password" inputmode="numeric" placeholder="Τρέχον PIN" autocomplete="off" />
+          </div>
+          <div>
+            <input class="field-input" id="admin-pin-new" type="password" inputmode="numeric" placeholder="Νέο PIN (π.χ. 3111)" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-change-pin">Αποθήκευση PIN</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-backup-raw">Αντίγραφο δεδομένων (JSON)</button>
+          <p class="sheet-sub">Προεπιλογή PIN: 3111. Προαιρετικά κατεβάστε πλήρες JSON αντίγραφο (όλες οι ημέρες + ονόματα) για έξτρα ασφάλεια.</p>
+        </div>
+        <div class="field-stack">
+          <div>
+            <label class="field-label" for="new-name">Νέο όνομα</label>
+            <input class="field-input" id="new-name" type="text" autocomplete="off" placeholder="Π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ" />
+          </div>
+          <div>
+            <label class="field-label" for="new-short">Σύντομο (προαιρετικό)</label>
+            <input class="field-input" id="new-short" type="text" autocomplete="off" placeholder="Εμφάνιση στη λίστα" />
+          </div>
+          <label class="check-row">
+            <input type="checkbox" id="new-dayrate" />
+            Ημερομίσθιο (1 ημέρα)
+          </label>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-add-name">Προσθήκη ονόματος</button>
+        </div>
+        <input
+          class="search"
+          id="admin-search"
+          type="search"
+          placeholder="Αναζήτηση καταλόγου…"
+          autocomplete="off"
+        />
+        <div class="admin-list" id="admin-list"></div>
+      </section>
+
+      <!-- MONTH -->
+      <section id="screen-month" class="screen" aria-label="Μήνας">
+        <div class="topbar">
+          <button type="button" class="icon-btn" id="btn-back-month" aria-label="Αρχική">←</button>
+          <h1>Μήνας</h1>
+          <button type="button" class="icon-btn" id="btn-month-email" aria-label="Email μήνα" title="Email">✉</button>
+        </div>
+        <div class="field-stack">
+          <div>
+            <label class="field-label" for="month-picker">Επιλογή μήνα</label>
+            <input class="field-input" id="month-picker" type="month" />
+          </div>
+        </div>
+        <div class="month-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-month-pdf">PDF</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-month-excel">Excel</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-month-email-2">Email</button>
+        </div>
+        <p class="mailto-note">
+          PDF = εκτύπωση/αποθήκευση από τον browser · Excel = αρχείο CSV · Email = mailto (όχι auto server).
+        </p>
+        <div class="month-table-wrap">
+          <table class="month-table" id="month-table">
+            <thead>
+              <tr>
+                <th>Όνομα</th>
+                <th>Ημέρες</th>
+                <th>Ώρες</th>
+                <th>Ημερομ.</th>
+                <th>Ανά ημέρα</th>
+              </tr>
+            </thead>
+            <tbody id="month-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- DATE PICKER -->
+    <div class="overlay" id="date-picker" role="dialog" aria-modal="true" aria-labelledby="date-picker-title">
+      <div class="sheet">
+        <div class="topbar">
+          <h2 id="date-picker-title">Άλλη ημερομηνία</h2>
+          <button type="button" class="icon-btn" id="btn-close-date" aria-label="Κλείσιμο">✕</button>
+        </div>
+        <p class="sheet-sub">Για παλιά ημέρα χρειάζεται PIN admin. Θα σημειωθεί ως εκπρόθεσμη καταχώρηση.</p>
+        <input class="field-input" id="other-date" type="date" />
+        <button type="button" class="btn btn-primary" id="btn-open-date">Άνοιγμα ημέρας</button>
+      </div>
+    </div>
+
+    <!-- PIN -->
+    <div class="overlay" id="pin-overlay" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+      <div class="sheet">
+        <div class="topbar">
+          <h2 id="pin-title">PIN admin</h2>
+          <button type="button" class="icon-btn" id="btn-close-pin" aria-label="Κλείσιμο">✕</button>
+        </div>
+        <p class="sheet-sub" id="pin-reason">Απαιτείται PIN για αυτή την ενέργεια.</p>
+        <input
+          class="field-input"
+          id="pin-input"
+          type="password"
+          inputmode="numeric"
+          maxlength="8"
+          placeholder="PIN"
+          autocomplete="off"
+        />
+        <button type="button" class="btn btn-primary" id="btn-pin-ok">Επιβεβαίωση</button>
+      </div>
+    </div>
+
+    <!-- NAME PICKER -->
+    <div class="overlay" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+      <div class="sheet">
+        <div class="topbar">
+          <h2 id="picker-title">Επιλογή ονόματος</h2>
+          <button type="button" class="icon-btn" id="btn-close-picker" aria-label="Κλείσιμο">✕</button>
+        </div>
+        <p class="sheet-sub" id="picker-sub">Προσωπικό Le Jardin</p>
+        <input
+          class="search"
+          id="picker-search"
+          type="search"
+          placeholder="Αναζήτηση ονόματος…"
+          autocomplete="off"
+        />
+        <div class="name-list" id="name-list"></div>
+      </div>
+    </div>
+
+    <!-- TIME PICKER -->
+    <div class="overlay" id="time-picker" role="dialog" aria-modal="true" aria-labelledby="time-picker-title">
+      <div class="sheet">
+        <div class="topbar">
+          <h2 id="time-picker-title">Επιλογή ώρας</h2>
+          <button type="button" class="icon-btn" id="btn-close-time" aria-label="Κλείσιμο">✕</button>
+        </div>
+        <p class="sheet-sub" id="time-picker-sub">Κάθε 5 λεπτά</p>
+        <div class="time-actions">
+          <button type="button" class="btn btn-ghost" id="btn-clear-time">Καθαρισμός ώρας</button>
+        </div>
+        <div class="time-list" id="time-list"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+    <div class="print-only" id="print-root"></div>
+
+    <script src="employees.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
