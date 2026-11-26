@@ -482,17 +482,18 @@
     await mirrorBackupToIdb();
   }
 
-  function exportRawBackup() {
+  async function exportRawBackup() {
     const backup = fullBackupPayload();
-    const blob = new Blob([JSON.stringify(backup, null, 2)], {
-      type: "application/json",
+    const text = JSON.stringify(backup, null, 2);
+    const blob = new Blob([text], { type: "application/json" });
+    await deliverBlob({
+      blob,
+      filename: `le-jardin-backup-${todayKey()}.json`,
+      mime: "application/json",
+      text,
+      startLabel: "Ετοιμασία αντιγράφου…",
+      successLabel: "Αντίγραφο JSON αποθηκεύτηκε",
     });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `le-jardin-backup-${todayKey()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast("Αντίγραφο JSON αποθηκεύτηκε");
   }
 
   function flushPersist() {
@@ -532,11 +533,140 @@
     return merged.filter((e) => e.active);
   }
 
-  function showToast(msg) {
+  function showToast(msg, ms = 2500) {
+    if (!els.toast) return;
     els.toast.textContent = msg;
     els.toast.classList.add("show");
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => els.toast.classList.remove("show"), 2000);
+    showToast._t = setTimeout(() => els.toast.classList.remove("show"), ms);
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function tryAnchorDownload(url, filename) {
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (_) {
+      ok = false;
+    }
+    ta.remove();
+    return ok;
+  }
+
+  /**
+   * Android Chrome / installed PWA often ignore <a download> + blob URLs
+   * (and immediate revokeObjectURL can cancel the download). Chain:
+   * anchor download → Web Share(File) → open tab → clipboard «αντιγράφηκε».
+   */
+  async function deliverBlob({
+    blob,
+    filename,
+    mime,
+    text,
+    startLabel,
+    successLabel,
+  }) {
+    showToast(startLabel || "Ετοιμασία αρχείου…", 3000);
+    const type = mime || blob.type || "application/octet-stream";
+    const url = URL.createObjectURL(blob);
+    let keepAliveMs = 4000;
+
+    try {
+      tryAnchorDownload(url, filename);
+      await sleep(300);
+
+      const file = new File([blob], filename, { type });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename });
+          showToast(successLabel || "Έτοιμο — μοιράστηκε", 3500);
+          return "shared";
+        } catch (err) {
+          if (err && err.name === "AbortError") {
+            showToast("Ακυρώθηκε", 2500);
+            return "aborted";
+          }
+        }
+      }
+
+      const standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+      const android = /Android/i.test(navigator.userAgent || "");
+
+      // Desktop browsers usually honor <a download>; toast success there.
+      if (!android && !standalone) {
+        showToast(successLabel || "Αποθηκεύτηκε", 3000);
+        return "download";
+      }
+
+      let win = null;
+      try {
+        win = window.open(url, "_blank", "noopener,noreferrer");
+      } catch (_) {
+        win = null;
+      }
+      if (win) {
+        keepAliveMs = 60000;
+        showToast("Άνοιξε καρτέλα — Αποθήκευση / Κοινή χρήση", 4500);
+        return "tab";
+      }
+
+      const payload =
+        text != null
+          ? text
+          : typeof blob.text === "function"
+            ? await blob.text()
+            : "";
+      if (payload && (await copyText(payload))) {
+        showToast("αντιγράφηκε — επικολλήστε σε αρχείο", 4500);
+        return "clipboard";
+      }
+
+      showToast("Αποτυχία εξαγωγής — δοκιμάστε Chrome", 4000);
+      return "fail";
+    } catch (_) {
+      showToast("Αποτυχία εξαγωγής", 4000);
+      return "fail";
+    } finally {
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (_) {
+          /* ignore */
+        }
+      }, keepAliveMs);
+    }
   }
 
   function setView(view) {
@@ -1320,13 +1450,14 @@
     window.print();
   }
 
-  function exportMonthExcel() {
+  async function exportMonthExcel() {
     const ym = els.monthPicker.value;
     if (!ym) {
       showToast("Διαλέξτε μήνα");
       return;
     }
     const rows = collectMonthRows(ym);
+    const empty = !rows.length;
     const lines = [
       "Κωδικός;Όνομα;Πλήρες;Ημέρες;Ώρες;Ημερομίσθια;Ανά ημέρα",
       ...rows.map(
@@ -1334,33 +1465,36 @@
           `${csvCell(r.id || "")};${csvCell(r.short)};${csvCell(r.name || "")};${r.days};${r.hours || ""};${r.dayRates || ""};${csvCell(r.dayBreakdown || "")}`
       ),
     ];
-    const blob = new Blob(["\uFEFF" + lines.join("\n")], {
-      type: "text/csv;charset=utf-8",
+    const text = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    await deliverBlob({
+      blob,
+      filename: `le-jardin-month-${ym}.csv`,
+      mime: "text/csv;charset=utf-8",
+      text,
+      startLabel: empty ? "Κενός μήνας — ετοιμασία CSV…" : "Ετοιμασία Excel / CSV…",
+      successLabel: "Excel / CSV",
     });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `le-jardin-month-${ym}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast("Excel / CSV");
   }
 
-  function exportMonthJson() {
+  async function exportMonthJson() {
     const ym = els.monthPicker.value;
     if (!ym) {
       showToast("Διαλέξτε μήνα");
       return;
     }
     const payload = monthPayload(ym);
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
+    const empty = !payload.employees || !payload.employees.length;
+    const text = JSON.stringify(payload, null, 2);
+    const blob = new Blob([text], { type: "application/json" });
+    await deliverBlob({
+      blob,
+      filename: `le-jardin-month-${ym}.json`,
+      mime: "application/json",
+      text,
+      startLabel: empty ? "Κενός μήνας — ετοιμασία JSON…" : "Ετοιμασία JSON μισθοδ.…",
+      successLabel: "JSON μισθοδοσίας",
     });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `le-jardin-month-${ym}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast("JSON μισθοδοσίας");
   }
 
   function csvCell(v) {
@@ -1481,17 +1615,18 @@
     };
   }
 
-  function exportDayJson() {
+  async function exportDayJson() {
     const payload = dayPayload();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
+    const text = JSON.stringify(payload, null, 2);
+    const blob = new Blob([text], { type: "application/json" });
+    await deliverBlob({
+      blob,
+      filename: `le-jardin-${state.dateKey}.json`,
+      mime: "application/json",
+      text,
+      startLabel: "Ετοιμασία JSON…",
+      successLabel: "Εξαγωγή JSON",
     });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `le-jardin-${state.dateKey}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast("Εξαγωγή JSON");
   }
 
   function emailDay() {
