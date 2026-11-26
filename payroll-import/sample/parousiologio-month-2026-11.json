@@ -1,0 +1,48 @@
+{
+  "store": "STORE 311",
+  "yearMonth": "2026-11",
+  "month": 11,
+  "exportedAt": "2026-11-26T12:00:00.000Z",
+  "format": "payroll-month-v1",
+  "employees": [
+    {
+      "id": "E005",
+      "short": "BERISHA",
+      "name": "BERISHA ΝΤΑΝΙΕΛ",
+      "daysCount": 3,
+      "hours": 24,
+      "dayRates": 0,
+      "dayBreakdown": "1/11 8 ώρες, 2/11 8 ώρες, 5/11 8 ώρες",
+      "days": [
+        { "dateKey": "2026-11-01", "day": 1, "label": "8 ώρες", "dayRate": false, "hours": 8 },
+        { "dateKey": "2026-11-02", "day": 2, "label": "8 ώρες", "dayRate": false, "hours": 8 },
+        { "dateKey": "2026-11-05", "day": 5, "label": "8 ώρες", "dayRate": false, "hours": 8 }
+      ]
+    },
+    {
+      "id": "E026",
+      "short": "ΠΑΠΑΔΟΝΙΚΟΛΑΚΗΣ",
+      "name": "ΠΑΠΑΔΟΝΙΚΟΛΑΚΗΣ ΓΙΑΝΝΗΣ",
+      "daysCount": 2,
+      "hours": 0,
+      "dayRates": 2,
+      "dayBreakdown": "1/11 1 ημέρα, 3/11 1 ημέρα",
+      "days": [
+        { "dateKey": "2026-11-01", "day": 1, "label": "1 ημέρα", "dayRate": true, "hours": 1 },
+        { "dateKey": "2026-11-03", "day": 3, "label": "1 ημέρα", "dayRate": true, "hours": 1 }
+      ]
+    },
+    {
+      "id": "E023",
+      "short": "ΜΟΥΜΟΥΡΗΣ",
+      "name": "ΜΟΥΜΟΥΡΗΣ ΑΛΕΞΑΝΔΡΟΣ",
+      "daysCount": 1,
+      "hours": 0,
+      "dayRates": 1,
+      "dayBreakdown": "7/11 1 ημέρα",
+      "days": [
+        { "dateKey": "2026-11-07", "day": 7, "label": "1 ημέρα", "dayRate": true, "hours": 1 }
+      ]
+    }
+  ]
+}
