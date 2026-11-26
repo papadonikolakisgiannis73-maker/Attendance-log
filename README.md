@@ -9,14 +9,10 @@
 
 ## Μισθοδοσία — εισαγωγή ωρών
 
-Από το tablet (Μήνας → **JSON μισθοδ.**) προς το `ΜΙΣΘΟΔΟΣΙΑ 2026.xlsx`:
+**Σελίδα στον browser (προτεινόμενο):** https://papadonikolakisgiannis73-maker.github.io/Attendance-log/misthodosia/
 
-```bash
-cd payroll-import
-pip install -r requirements.txt
-python3 import_hours.py --xlsx "ΜΙΣΘΟΔΟΣΙΑ 2026.xlsx" --export parousiologio-month-YYYY-MM.json
-```
+1. JSON μήνα από το tablet → 2. αρχείο ΜΙΣΘΟΔΟΣΙΑ `.xlsx` → 3. κατέβασμα ενημερωμένου Excel.
 
-Λεπτομέρειες, overrides και ασφαλής προσθήκη/αφαίρεση ατόμου: [`payroll-import/README.md`](payroll-import/README.md).
+Εναλλακτικά Python: [`payroll-import/README.md`](payroll-import/README.md).
 
 © 2025 Giannis Papadonikolakis All rights reserved.
