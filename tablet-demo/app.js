@@ -168,6 +168,7 @@
     btnMonthEmail2: document.getElementById("btn-month-email-2"),
     btnMonthPdf: document.getElementById("btn-month-pdf"),
     btnMonthExcel: document.getElementById("btn-month-excel"),
+    btnMonthJson: document.getElementById("btn-month-json"),
     toast: document.getElementById("toast"),
     printRoot: document.getElementById("print-root"),
   };
@@ -1233,6 +1234,7 @@
         if (!dayEmp.stamped) return;
         if (!totals[empId]) {
           totals[empId] = {
+            id: empId,
             short: dayEmp.short,
             name: dayEmp.name,
             days: 0,
@@ -1277,6 +1279,46 @@
         };
       })
       .sort((a, b) => a.short.localeCompare(b.short, "el"));
+  }
+
+  function monthPayload(ym) {
+    const rows = collectMonthRows(ym);
+    return {
+      store: "STORE 311",
+      yearMonth: ym,
+      month: Number(String(ym).split("-")[1]),
+      exportedAt: new Date().toISOString(),
+      format: "payroll-month-v1",
+      employees: rows.map((r) => ({
+        id: r.id,
+        short: r.short,
+        name: r.name,
+        daysCount: r.days,
+        hours: r.hours,
+        dayRates: r.dayRates,
+        dayBreakdown: r.dayBreakdown,
+        days: (r.dayParts || []).map((p) => {
+          const day = Number(String(p.dateKey || "").split("-")[2]);
+          const dayRate = p.label === "1 ημέρα";
+          let hours = null;
+          if (dayRate) hours = 1;
+          else {
+            const m = String(p.label || "").match(/(\d+)(?::(\d{2}))?/);
+            if (m) {
+              hours = Number(m[1]) + (m[2] ? Number(m[2]) / 60 : 0);
+              hours = Math.round(hours * 100) / 100;
+            }
+          }
+          return {
+            dateKey: p.dateKey,
+            day,
+            label: p.label,
+            dayRate,
+            hours,
+          };
+        }),
+      })),
+    };
   }
 
   function renderMonth() {
@@ -1338,10 +1380,10 @@
     }
     const rows = collectMonthRows(ym);
     const lines = [
-      "Όνομα;Πλήρες;Ημέρες;Ώρες;Ημερομίσθια;Ανά ημέρα",
+      "Κωδικός;Όνομα;Πλήρες;Ημέρες;Ώρες;Ημερομίσθια;Ανά ημέρα",
       ...rows.map(
         (r) =>
-          `${csvCell(r.short)};${csvCell(r.name || "")};${r.days};${r.hours || ""};${r.dayRates || ""};${csvCell(r.dayBreakdown || "")}`
+          `${csvCell(r.id || "")};${csvCell(r.short)};${csvCell(r.name || "")};${r.days};${r.hours || ""};${r.dayRates || ""};${csvCell(r.dayBreakdown || "")}`
       ),
     ];
     const blob = new Blob(["\uFEFF" + lines.join("\n")], {
@@ -1353,6 +1395,24 @@
     a.click();
     URL.revokeObjectURL(a.href);
     showToast("Excel / CSV");
+  }
+
+  function exportMonthJson() {
+    const ym = els.monthPicker.value;
+    if (!ym) {
+      showToast("Διαλέξτε μήνα");
+      return;
+    }
+    const payload = monthPayload(ym);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `parousiologio-month-${ym}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("JSON μισθοδοσίας");
   }
 
   function csvCell(v) {
@@ -1628,6 +1688,9 @@
     els.monthPicker.addEventListener("change", renderMonth);
     els.btnMonthPdf.addEventListener("click", exportMonthPdf);
     els.btnMonthExcel.addEventListener("click", exportMonthExcel);
+    if (els.btnMonthJson) {
+      els.btnMonthJson.addEventListener("click", exportMonthJson);
+    }
     els.btnMonthEmail.addEventListener("click", emailMonth);
     els.btnMonthEmail2.addEventListener("click", emailMonth);
 
