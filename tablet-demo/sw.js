@@ -1,7 +1,7 @@
 // App-shell cache only. Bumping CACHE must NEVER clear localStorage / IndexedDB
 // attendance keys (parousiologio-offline-demo-v2, roster, IDB full-backup-v1).
 const CACHE_PREFIX = "parousiologio-tablet-";
-const CACHE = "parousiologio-tablet-r4-v9";
+const CACHE = "parousiologio-tablet-r4-v10";
 const PRECACHE = [
   "./",
   "./index.html",

@@ -6,6 +6,7 @@
 
 - STORE 311 (με πόστα): https://papadonikolakisgiannis73-maker.github.io/Attendance-log/tablet-demo/
 - Le Jardin (επίπεδη λίστα, χωρίς πόστα): https://papadonikolakisgiannis73-maker.github.io/Attendance-log/le-jardin/
+- Οδηγίες προσωπικού (εκτύπωση / tablet): https://papadonikolakisgiannis73-maker.github.io/Attendance-log/tutorial/
 
 ## Μισθοδοσία — εισαγωγή ωρών
 
