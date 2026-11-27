@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Οδηγίες προσωπικού — Παρουσιολόγιο</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a2214;
+      --muted: #5a6750;
+      --line: rgba(26, 34, 20, 0.14);
+      --accent: #c48a1a;
+      --bg: #f4f7f0;
+      --card: #fff;
+      --font-display: "Syne", "Segoe UI", sans-serif;
+      --font-body: "Manrope", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.4;
+    }
+    body {
+      background:
+        radial-gradient(100% 60% at 50% -5%, rgba(196, 138, 26, 0.14), transparent 50%),
+        linear-gradient(180deg, #fafcf7, var(--bg));
+      min-height: 100dvh;
+    }
+    .wrap {
+      width: min(100%, 720px);
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      margin: 0 0 6px;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
+      margin: 0 0 10px;
+      letter-spacing: 0.02em;
+    }
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    .note {
+      margin: 14px 0 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      font-size: 0.95rem;
+    }
+    section {
+      margin-top: 28px;
+      padding-top: 8px;
+      break-inside: avoid;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      margin: 0 0 12px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    h2 .n {
+      color: var(--accent);
+      font-weight: 800;
+    }
+    ol {
+      margin: 0;
+      padding-left: 1.3rem;
+    }
+    li { margin: 0.35rem 0; }
+    .shot {
+      display: block;
+      width: 100%;
+      max-width: 420px;
+      margin: 14px auto 0;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .warn {
+      margin-top: 28px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 2px solid rgba(176, 58, 58, 0.35);
+      background: rgba(176, 58, 58, 0.06);
+    }
+    .warn h2 { margin-bottom: 8px; }
+    .warn ul { margin: 0; padding-left: 1.2rem; }
+    .quick {
+      margin-top: 28px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      background: rgba(196, 138, 26, 0.1);
+      border: 1px solid rgba(196, 138, 26, 0.28);
+    }
+    footer {
+      margin-top: 36px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--ink); }
+    @media print {
+      body { background: #fff; }
+      .wrap { padding: 12px; max-width: none; }
+      .shot { max-width: 280px; }
+      a { text-decoration: none; color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">Παρουσιολόγιο · tablet</p>
+      <h1>Οδηγίες για προσωπικό</h1>
+      <p class="lead">Ίδια βήματα για STORE 311 και Le Jardin.</p>
+      <p class="note">
+        Στο <strong>Le Jardin</strong> δεν υπάρχουν πόστα — πατάς κατευθείαν το όνομά σου.
+      </p>
+    </header>
+
+    <section>
+      <h2><span class="n">1.</span> Άνοιξε τη σημερινή ημέρα</h2>
+      <ol>
+        <li>Κοίτα την αρχική οθόνη.</li>
+        <li>Πάτα το μεγάλο κουμπί <strong>ΣΗΜΕΡΑ</strong>.</li>
+      </ol>
+      <img class="shot" src="img/home.png" alt="Αρχική οθόνη STORE 311 με κουμπί ΣΗΜΕΡΑ" />
+      <img class="shot" src="img/le-jardin-home.png" alt="Αρχική οθόνη Le Jardin" />
+    </section>
+
+    <section>
+      <h2><span class="n">2.</span> Βρες τον εαυτό σου</h2>
+      <p><strong>STORE 311</strong></p>
+      <ol>
+        <li>Βλέπεις τη λίστα της ημέρας με πόστα (π.χ. ΣΕΡΒΙΤΟΡΟΙ).</li>
+        <li>Πάτα <strong>＋ Προσθήκη</strong> στο πόστο σου.</li>
+        <li>Διάλεξε το όνομά σου από τη λίστα.</li>
+      </ol>
+      <img class="shot" src="img/day-board.png" alt="Λίστα ημέρας με πόστα" />
+      <p style="margin-top:14px"><strong>Le Jardin</strong></p>
+      <ol>
+        <li>Βλέπεις απλή λίστα ονομάτων (χωρίς πόστα).</li>
+        <li>Πάτα το όνομά σου.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2><span class="n">3.</span> Άφιξη ή αποχώρηση</h2>
+      <ol>
+        <li>Πάτα <strong>ΑΦΙΞΗ</strong> όταν έρχεσαι.</li>
+        <li>Πάτα <strong>ΑΠΟΧΩΡΗΣΗ</strong> όταν φεύγεις.</li>
+        <li>Η ώρα μπαίνει αυτόματα από το ρολόι του tablet.</li>
+      </ol>
+      <img class="shot" src="img/stamp.png" alt="Οθόνη ΑΦΙΞΗ και ΑΠΟΧΩΡΗΣΗ" />
+    </section>
+
+    <section>
+      <h2><span class="n">4.</span> Ημερομίσθιο</h2>
+      <ol>
+        <li>Αν δουλεύεις με ημερομίσθιο, πάτα <strong>Ημερομίσθιο (1)</strong>.</li>
+        <li>Αλλιώς άστο.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2><span class="n">5.</span> Σημειώσεις</h2>
+      <ol>
+        <li>Προαιρετικά γράψε κάτι σύντομο κάτω (π.χ. καθυστέρηση).</li>
+        <li>Δεν είναι υποχρεωτικό.</li>
+      </ol>
+    </section>
+
+    <div class="warn">
+      <h2>Μην αγγίζεις αυτά</h2>
+      <p>Είναι για τον υπεύθυνο:</p>
+      <ul>
+        <li><strong>Μήνας</strong></li>
+        <li><strong>Ονόματα / PIN</strong></li>
+        <li><strong>Καθαρισμός</strong></li>
+      </ul>
+      <p>Αν ζητήσει PIN, πάτα πίσω και κάλεσε τον υπεύθυνο.</p>
+    </div>
+
+    <div class="quick">
+      <h2>Γρήγορα</h2>
+      <ol>
+        <li><strong>ΣΗΜΕΡΑ</strong></li>
+        <li>Όνομα (και πόστο στο STORE 311)</li>
+        <li><strong>ΑΦΙΞΗ</strong> ή <strong>ΑΠΟΧΩΡΗΣΗ</strong></li>
+        <li>Ημερομίσθιο μόνο αν ισχύει</li>
+        <li>Σημειώσεις αν θέλεις</li>
+      </ol>
+    </div>
+
+    <footer>
+      <p>
+        Εφαρμογές:
+        <a href="../tablet-demo/">STORE 311</a>
+        ·
+        <a href="../le-jardin/">Le Jardin</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
