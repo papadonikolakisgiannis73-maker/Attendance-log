@@ -45,6 +45,8 @@
     days: {},
     lateEntry: false,
     customEmployees: [],
+    // Seed renames keyed by stable employee id (never wipe on boot).
+    overrides: {},
     deactivatedIds: [],
     pin: DEFAULT_PIN,
     pickSlot: null,
@@ -264,9 +266,53 @@
   function rosterPayload() {
     return {
       customEmployees: state.customEmployees,
+      overrides: state.overrides,
       deactivatedIds: state.deactivatedIds,
       pin: state.pin,
     };
+  }
+
+  function rosterRichness(roster) {
+    if (!roster || typeof roster !== "object") return 0;
+    const custom = Array.isArray(roster.customEmployees)
+      ? roster.customEmployees.length
+      : 0;
+    const deactivated = Array.isArray(roster.deactivatedIds)
+      ? roster.deactivatedIds.length
+      : 0;
+    const overrides =
+      roster.overrides && typeof roster.overrides === "object"
+        ? Object.keys(roster.overrides).length
+        : 0;
+    const pinBonus =
+      roster.pin && String(roster.pin) !== DEFAULT_PIN ? 1 : 0;
+    return custom + deactivated + overrides + pinBonus;
+  }
+
+  function pickRicherRoster(a, b) {
+    const ra = rosterRichness(a);
+    const rb = rosterRichness(b);
+    if (rb > ra) return b;
+    if (ra > 0) return a;
+    return a || b || null;
+  }
+
+  function normalizeOverrides(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+    const out = {};
+    Object.keys(raw).forEach((id) => {
+      const row = raw[id];
+      if (!row || typeof row !== "object") return;
+      const name = row.name != null ? String(row.name).trim() : "";
+      const short = row.short != null ? String(row.short).trim() : "";
+      if (!name && !short) return;
+      out[id] = {
+        name: name || short,
+        short: short || name.split(/\s+/)[0] || name,
+      };
+      if (typeof row.dayRate === "boolean") out[id].dayRate = row.dayRate;
+    });
+    return out;
   }
 
   function fullBackupPayload() {
@@ -408,9 +454,30 @@
 
   function applyRosterData(data) {
     if (!data || typeof data !== "object") return false;
-    state.customEmployees = Array.isArray(data.customEmployees)
+    const seedIds = new Set((window.EMPLOYEES || []).map((e) => e.id));
+    const incoming = Array.isArray(data.customEmployees)
       ? data.customEmployees
       : [];
+    const custom = [];
+    const overrides = normalizeOverrides(data.overrides);
+    incoming.forEach((row) => {
+      if (!row || !row.id) return;
+      if (seedIds.has(row.id) && !overrides[row.id]) {
+        overrides[row.id] = {
+          name: String(row.name || "").trim(),
+          short: String(row.short || row.name || "")
+            .trim()
+            .split(/\s+/)[0],
+        };
+        if (typeof row.dayRate === "boolean") {
+          overrides[row.id].dayRate = row.dayRate;
+        }
+        return;
+      }
+      custom.push(row);
+    });
+    state.customEmployees = custom;
+    state.overrides = overrides;
     state.deactivatedIds = Array.isArray(data.deactivatedIds)
       ? data.deactivatedIds
       : [];
@@ -434,10 +501,13 @@
     let attendance = readLocalAttendance();
     let roster = readLocalRoster();
     let idbBackup = null;
+    let idbReadOk = false;
     try {
       idbBackup = await idbGet(IDB_BACKUP_KEY);
+      idbReadOk = true;
     } catch (_) {
       idbBackup = null;
+      idbReadOk = false;
     }
 
     const lsCount = countStampedSlots(attendance && attendance.days);
@@ -461,13 +531,18 @@
       }
     }
 
-    if ((!roster || (!roster.customEmployees && !roster.pin)) && idbBackup && idbBackup.roster) {
-      roster = idbBackup.roster;
+    // Prefer richer roster — never let empty/default LS wipe IDB renames/adds.
+    const idbRoster = idbBackup && idbBackup.roster ? idbBackup.roster : null;
+    const chosenRoster = pickRicherRoster(roster, idbRoster);
+    if (chosenRoster && chosenRoster !== roster) {
+      roster = chosenRoster;
       try {
         writeLocalRoster(roster);
       } catch (_) {
         /* ignore */
       }
+    } else {
+      roster = chosenRoster;
     }
 
     if (attendance) applyAttendanceData(attendance);
@@ -479,7 +554,12 @@
     } catch (_) {
       /* ignore */
     }
-    await mirrorBackupToIdb();
+    const localRich =
+      rosterRichness(rosterPayload()) > 0 ||
+      countStampedSlots(attendancePayload().days) > 0;
+    if (idbReadOk || localRich) {
+      await mirrorBackupToIdb();
+    }
   }
 
   async function exportRawBackup() {
@@ -516,19 +596,47 @@
   }
 
   function allEmployees(includeInactive = false) {
-    const seed = (window.EMPLOYEES || []).map((e) => ({
-      ...e,
-      source: "seed",
-      active: !state.deactivatedIds.includes(e.id),
-      dayRate: !!e.dayRate,
-    }));
-    const custom = state.customEmployees.map((e) => ({
-      ...e,
-      source: "custom",
-      active: e.active !== false,
-      dayRate: !!e.dayRate,
-    }));
-    const merged = [...seed, ...custom];
+    const byId = new Map();
+    (window.EMPLOYEES || []).forEach((e) => {
+      const over = state.overrides[e.id] || {};
+      byId.set(e.id, {
+        ...e,
+        ...over,
+        id: e.id,
+        source: "seed",
+        active: !state.deactivatedIds.includes(e.id),
+        dayRate:
+          typeof over.dayRate === "boolean" ? over.dayRate : !!e.dayRate,
+        renamed: !!(over.name || over.short),
+      });
+    });
+    state.customEmployees.forEach((e) => {
+      if (!e || !e.id) return;
+      if (byId.has(e.id)) {
+        const prev = byId.get(e.id);
+        byId.set(e.id, {
+          ...prev,
+          name: e.name || prev.name,
+          short: e.short || prev.short,
+          dayRate:
+            typeof e.dayRate === "boolean" ? e.dayRate : prev.dayRate,
+          renamed: true,
+          active:
+            e.active === false
+              ? false
+              : !state.deactivatedIds.includes(e.id),
+        });
+        return;
+      }
+      byId.set(e.id, {
+        ...e,
+        source: "custom",
+        active: e.active !== false,
+        dayRate: !!e.dayRate,
+        renamed: false,
+      });
+    });
+    const merged = Array.from(byId.values());
     if (includeInactive) return merged;
     return merged.filter((e) => e.active);
   }
@@ -1184,10 +1292,18 @@
       const tags = [
         emp.dayRate ? "ημερομίσθιο" : null,
         emp.source === "custom" ? "δικό σας" : null,
+        emp.renamed ? "μετονομασία" : null,
       ]
         .filter(Boolean)
         .join(" · ");
       main.innerHTML = `<strong>${escapeHtml(emp.short)}</strong><span>${escapeHtml(emp.name)}${tags ? " · " + escapeHtml(tags) : ""}</span>`;
+      const actions = document.createElement("div");
+      actions.className = "admin-item-actions";
+      const renameBtn = document.createElement("button");
+      renameBtn.type = "button";
+      renameBtn.className = "btn btn-ghost btn-sm";
+      renameBtn.textContent = "Μετονομασία";
+      renameBtn.addEventListener("click", () => renameEmployee(emp));
       const action = document.createElement("button");
       action.type = "button";
       action.className = "btn btn-ghost btn-sm";
@@ -1198,10 +1314,48 @@
         action.textContent = "Ενεργοποίηση";
         action.addEventListener("click", () => activateEmployee(emp));
       }
+      actions.appendChild(renameBtn);
+      actions.appendChild(action);
       row.appendChild(main);
-      row.appendChild(action);
+      row.appendChild(actions);
       els.adminList.appendChild(row);
     });
+  }
+
+  function renameEmployee(emp) {
+    const nextName = window.prompt("Πλήρες όνομα", emp.name || "");
+    if (nextName == null) return;
+    const name = String(nextName).trim();
+    if (!name) {
+      showToast("Γράψτε όνομα");
+      return;
+    }
+    const nextShort = window.prompt(
+      "Σύντομο όνομα (εμφάνιση)",
+      emp.short || name.split(/\s+/)[0]
+    );
+    if (nextShort == null) return;
+    const short =
+      String(nextShort).trim() || name.split(/\s+/)[0] || name;
+    const upperName = name.toLocaleUpperCase("el");
+    const upperShort = short.toLocaleUpperCase("el");
+
+    if (emp.source === "custom") {
+      const found = state.customEmployees.find((e) => e.id === emp.id);
+      if (found) {
+        found.name = upperName;
+        found.short = upperShort;
+      }
+    } else {
+      state.overrides[emp.id] = {
+        ...(state.overrides[emp.id] || {}),
+        name: upperName,
+        short: upperShort,
+      };
+    }
+    saveRoster();
+    renderAdminList();
+    showToast(`Μετονομάστηκε: ${upperShort}`);
   }
 
   function addEmployee() {
