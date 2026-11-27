@@ -524,6 +524,14 @@ button {
   font-weight: 700;
 }
 
+.admin-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: stretch;
+}
+
 .person-hero {
   text-align: center;
   padding: 12px 8px 4px;

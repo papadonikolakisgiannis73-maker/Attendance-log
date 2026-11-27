@@ -1,7 +1,7 @@
 // App-shell cache only. Bumping CACHE must NEVER clear localStorage / IndexedDB
 // attendance keys (le-jardin-attendance-v1, roster, IDB full-backup-v1).
 const CACHE_PREFIX = "le-jardin-tablet-";
-const CACHE = "le-jardin-tablet-r1-v6";
+const CACHE = "le-jardin-tablet-r1-v7";
 const PRECACHE = [
   "./",
   "./index.html",
