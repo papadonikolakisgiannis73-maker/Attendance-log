@@ -159,11 +159,54 @@
     return out;
   }
 
+  // Business day rolls at 05:00 local (shop tablets, Europe/Athens).
+  // Before 05:00 still counts as the previous calendar date.
+  const DAY_ROLLOVER_HOUR = 5;
+
   function todayKey(d = new Date()) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
+    const shifted = new Date(d.getTime());
+    if (shifted.getHours() < DAY_ROLLOVER_HOUR) {
+      shifted.setDate(shifted.getDate() - 1);
+    }
+    const y = shifted.getFullYear();
+    const m = String(shifted.getMonth() + 1).padStart(2, "0");
+    const day = String(shifted.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  }
+
+  function isDatePickerOpen() {
+    return !!(els.datePicker && els.datePicker.classList.contains("open"));
+  }
+
+  /** Persist stale day and switch to business-today. Skips intentional lateEntry and open date picker. */
+  function rollToBusinessToday() {
+    const today = todayKey();
+    if (!state.dateKey || state.dateKey === today) return false;
+    if (isDatePickerOpen()) return false;
+    // Admin late-entry for another date stays until they leave / start today.
+    if (state.lateEntry) return false;
+
+    persistCurrentDayIntoHistory();
+    if (!state.days[today]) state.days[today] = emptyDay();
+    loadDayIntoState(today);
+    state.lateEntry = false;
+    state.activeSlot = null;
+    save();
+    return true;
+  }
+
+  /** Auto-correct after 05:00 boundary (clock / focus / visibility / stamp). */
+  function ensureBusinessDay() {
+    if (!rollToBusinessToday()) return false;
+    if (state.view === "day" || state.view === "person") {
+      els.dayDate.textContent = formatLongDate(state.dateKey);
+      els.lateBanner.hidden = !state.lateEntry;
+      renderBoard();
+      setView("day");
+    }
+    updateContinueVisibility();
+    showToast("Η ημέρα άλλαξε σε σήμερα");
+    return true;
   }
 
   function parseKey(key) {
@@ -994,6 +1037,7 @@
   }
 
   function stampArrive() {
+    if (ensureBusinessDay()) return;
     const slot = state.slots[state.activeSlot];
     if (!slot) return;
     if (slot.dayRate) {
@@ -1007,6 +1051,7 @@
   }
 
   function stampLeave() {
+    if (ensureBusinessDay()) return;
     const slot = state.slots[state.activeSlot];
     if (!slot) return;
     if (slot.dayRate) {
@@ -1103,11 +1148,13 @@
   }
 
   function showDayScreen() {
+    const rolled = rollToBusinessToday();
     els.dayDate.textContent = formatLongDate(state.dateKey);
     els.lateBanner.hidden = !state.lateEntry;
     renderBoard();
     setView("day");
     updateContinueVisibility();
+    if (rolled) showToast("Η ημέρα άλλαξε σε σήμερα");
   }
 
   function startToday() {
@@ -1122,6 +1169,7 @@
 
   function continueDay() {
     if (!state.dateKey) state.dateKey = todayKey();
+    // Past date without lateEntry auto-corrects to business-today on the day board.
     showDayScreen();
   }
 
@@ -1696,6 +1744,7 @@
     els.homeDate.textContent = formatLongDate(todayKey(now));
     els.homeTime.textContent = formatClock(now);
     if (els.dayClock) els.dayClock.textContent = formatClock(now);
+    ensureBusinessDay();
   }
 
   function updateContinueVisibility() {
@@ -1919,7 +1968,9 @@
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") flushPersist();
+      else ensureBusinessDay();
     });
+    window.addEventListener("focus", () => ensureBusinessDay());
     window.addEventListener("pagehide", flushPersist);
   }
 
@@ -1937,6 +1988,9 @@
     exportRawBackup,
     flushPersist,
     STORE_NAME,
+    todayKey,
+    ensureBusinessDay,
+    rollToBusinessToday,
   };
 
   load()
