@@ -37,6 +37,9 @@
 
   const TIME_STEP = 5;
   const TIME_OPTIONS = buildTimeOptions();
+  // Must be declared before state init — todayKey() reads this (TDZ if below).
+  // Business day rolls at 05:00 local (shop tablets, Europe/Athens).
+  const DAY_ROLLOVER_HOUR = 5;
 
   const state = {
     view: "home",
@@ -160,10 +163,7 @@
     return out;
   }
 
-  // Business day rolls at 05:00 local (shop tablets, Europe/Athens).
   // Before 05:00 still counts as the previous calendar date.
-  const DAY_ROLLOVER_HOUR = 5;
-
   function todayKey(d = new Date()) {
     const shifted = new Date(d.getTime());
     if (shifted.getHours() < DAY_ROLLOVER_HOUR) {
