@@ -98,6 +98,7 @@
     btnMonth: document.getElementById("btn-month"),
     btnNames: document.getElementById("btn-names"),
     btnInstall: document.getElementById("btn-install"),
+    btnFullscreen: document.getElementById("btn-fullscreen"),
     dayDate: document.getElementById("day-date"),
     dayClock: document.getElementById("day-clock"),
     lateBanner: document.getElementById("late-banner"),
@@ -1952,25 +1953,163 @@
     if (state.view === "person" && state.activeSlot) persistNotes();
   }
 
+  function isStandaloneDisplay() {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches ||
+      window.matchMedia("(display-mode: minimal-ui)").matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isDocumentFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement
+    );
+  }
+
+  function updateFullscreenButton() {
+    if (!els.btnFullscreen) return;
+    // Offer fullscreen helper when running as installed app / PWA without OS fullscreen.
+    // Does not replace Android screen pinning (lock task).
+    const show =
+      isStandaloneDisplay() &&
+      !isDocumentFullscreen() &&
+      !!(document.documentElement.requestFullscreen ||
+        document.documentElement.webkitRequestFullscreen);
+    els.btnFullscreen.hidden = !show;
+  }
+
+  function tryEnterFullscreen() {
+    const root = document.documentElement;
+    const req =
+      root.requestFullscreen ||
+      root.webkitRequestFullscreen ||
+      root.msRequestFullscreen;
+    if (!req || isDocumentFullscreen()) return Promise.resolve(false);
+    try {
+      const result = req.call(root);
+      return Promise.resolve(result).then(() => true).catch(() => false);
+    } catch (_) {
+      return Promise.resolve(false);
+    }
+  }
+
+  function closeAnyOverlay() {
+    if (els.pinOverlay && els.pinOverlay.classList.contains("open")) {
+      closePin();
+      return true;
+    }
+    if (els.picker && els.picker.classList.contains("open")) {
+      closePicker();
+      return true;
+    }
+    if (els.timePicker && els.timePicker.classList.contains("open")) {
+      closeTimePicker();
+      return true;
+    }
+    if (els.datePicker && els.datePicker.classList.contains("open")) {
+      closeDateSheet();
+      return true;
+    }
+    return false;
+  }
+
+  function navigateBackInApp() {
+    if (closeAnyOverlay()) return;
+    if (state.view === "person") {
+      persistNotesIfNeeded();
+      showDayScreen();
+      return;
+    }
+    if (state.view === "day" || state.view === "names" || state.view === "month") {
+      goHome();
+      return;
+    }
+    // Already on home — stay; soft history trap keeps browser from exiting the PWA.
+  }
+
+  function setupKioskGuards() {
+    // Soft web hardening only. True Android lock-task / screen pin is OS-level
+    // (see ../kiosk/). Do not fake lock-task from JavaScript.
+    try {
+      if (!history.state || !history.state.kiosk) {
+        history.replaceState({ kiosk: true, view: state.view || "home" }, "");
+      }
+      history.pushState({ kiosk: true, view: state.view || "home" }, "");
+    } catch (_) {
+      /* ignore */
+    }
+
+    window.addEventListener("popstate", () => {
+      navigateBackInApp();
+      try {
+        history.pushState({ kiosk: true, view: state.view || "home" }, "");
+      } catch (_) {
+        /* ignore */
+      }
+    });
+
+    document.addEventListener("fullscreenchange", updateFullscreenButton);
+    document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
+    updateFullscreenButton();
+
+    // First staff tap: try browser fullscreen when installed as app (gesture required).
+    let triedFs = false;
+    document.addEventListener(
+      "pointerdown",
+      () => {
+        if (triedFs || !isStandaloneDisplay() || isDocumentFullscreen()) return;
+        triedFs = true;
+        tryEnterFullscreen().finally(updateFullscreenButton);
+      },
+      { passive: true, once: true }
+    );
+  }
+
   function registerPwa() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      state.deferredInstall = e;
-      els.btnInstall.hidden = false;
-    });
-    els.btnInstall.addEventListener("click", async () => {
-      if (!state.deferredInstall) {
-        showToast("Χρησιμοποιήστε «Προσθήκη στην αρχική οθόνη» στο Chrome");
-        return;
-      }
-      state.deferredInstall.prompt();
-      await state.deferredInstall.userChoice;
+    if (isStandaloneDisplay()) {
+      if (els.btnInstall) els.btnInstall.hidden = true;
+    } else {
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        state.deferredInstall = e;
+        if (els.btnInstall) els.btnInstall.hidden = false;
+      });
+    }
+    window.addEventListener("appinstalled", () => {
       state.deferredInstall = null;
-      els.btnInstall.hidden = true;
+      if (els.btnInstall) els.btnInstall.hidden = true;
+      updateFullscreenButton();
+      showToast("Εγκαταστάθηκε ως εφαρμογή");
     });
+    if (els.btnInstall) {
+      els.btnInstall.addEventListener("click", async () => {
+        if (!state.deferredInstall) {
+          showToast("Χρησιμοποιήστε «Προσθήκη στην αρχική οθόνη» στο Chrome");
+          return;
+        }
+        state.deferredInstall.prompt();
+        await state.deferredInstall.userChoice;
+        state.deferredInstall = null;
+        els.btnInstall.hidden = true;
+      });
+    }
+    if (els.btnFullscreen) {
+      els.btnFullscreen.addEventListener("click", async () => {
+        const ok = await tryEnterFullscreen();
+        updateFullscreenButton();
+        if (!ok) {
+          showToast("Για κλείδωμα tablet: καρφίτσωμα οθόνης (οδηγίες kiosk)");
+        }
+      });
+    }
+    setupKioskGuards();
   }
 
   function bindUi() {

@@ -1,14 +1,19 @@
 {
   "name": "ΠΑΡΟΥΣΙΟΛΟΓΙΟ — STORE 311",
   "short_name": "Παρουσιολόγιο",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#f4f7f0",
   "theme_color": "#f4f7f0",
   "description": "Offline παρουσιολόγιο tablet για STORE 311",
   "lang": "el",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",

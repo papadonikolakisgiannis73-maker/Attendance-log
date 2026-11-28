@@ -33,6 +33,7 @@ body {
   font-family: var(--font-body);
   font-size: 18px;
   line-height: 1.35;
+  overscroll-behavior: none;
 }
 
 body {
@@ -43,6 +44,22 @@ body {
     radial-gradient(70% 50% at 0% 90%, rgba(120, 160, 90, 0.14), transparent 45%),
     linear-gradient(180deg, #fafcf7, var(--bg0) 42%, #e4ecdc);
   overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  body {
+    /* Installed PWA: keep chrome-free feel; OS pin still required for true lock. */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input,
+  textarea,
+  select {
+    user-select: text;
+    -webkit-user-select: text;
+  }
 }
 
 button,
@@ -763,6 +780,16 @@ button {
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.7);
+}
+
+.kiosk-tip {
+  margin: 8px 0 0;
+}
+
+.kiosk-tip a {
+  color: var(--ink);
+  font-weight: 700;
+  text-underline-offset: 2px;
 }
 
 .month-table-wrap {

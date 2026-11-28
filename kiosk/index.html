@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title>Κλείδωμα tablet — παρουσιολόγιο</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a2214;
+      --muted: #5a6750;
+      --line: rgba(26, 34, 20, 0.14);
+      --accent: #c48a1a;
+      --bg: #f4f7f0;
+      --font-display: "Syne", "Segoe UI", sans-serif;
+      --font-body: "Manrope", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.45;
+    }
+    body {
+      background:
+        radial-gradient(100% 60% at 50% -5%, rgba(196, 138, 26, 0.14), transparent 50%),
+        linear-gradient(180deg, #fafcf7, var(--bg));
+      min-height: 100dvh;
+    }
+    .wrap {
+      width: min(100%, 720px);
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      margin: 0 0 6px;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 5vw, 2.1rem);
+      margin: 0 0 10px;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      margin: 28px 0 10px;
+    }
+    .lead, .note { color: var(--muted); margin: 0 0 12px; }
+    ol, ul { margin: 0; padding-left: 1.3rem; }
+    li { margin: 0.4rem 0; }
+    a { color: var(--ink); font-weight: 700; }
+    .box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.75);
+    }
+    .warn {
+      border-color: rgba(176, 58, 58, 0.35);
+      background: rgba(176, 58, 58, 0.06);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    footer {
+      margin-top: 36px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="eyebrow">Admin · tablet · kiosk</p>
+    <h1>Κλείδωμα tablet παρουσιολογίου</h1>
+    <p class="lead">
+      Για υπεύθυνο STORE 311 / Le Jardin. Η εφαρμογή <strong>δεν μπορεί μόνη της</strong>
+      να κλειδώσει Home / Πρόσφατες εφαρμογές — χρειάζεται καρφίτσωμα Android (ή kiosk browser).
+    </p>
+
+    <div class="box warn">
+      <strong>Σημαντικό:</strong> πρώτα εγκαταστήστε ως εφαρμογή από Chrome/Edge,
+      μετά καρφιτσώστε. Το web «Πλήρης οθόνη» δεν αντικαθιστά το καρφίτσωμα.
+    </div>
+
+    <h2>1. Εγκατάσταση ως εφαρμογή</h2>
+    <ol>
+      <li>Ανοίξτε στο Chrome/Edge το URL του μαγαζιού (δείτε κάτω).</li>
+      <li>Μενού <strong>⋮</strong> → <strong>Εγκατάσταση εφαρμογής</strong> ή <strong>Προσθήκη στην αρχική οθόνη</strong>.</li>
+      <li>Ανοίγετε <strong>μόνο από το εικονίδιο</strong> (όχι από καρτέλα browser).</li>
+      <li>Αν φαίνεται <strong>Πλήρης οθόνη</strong> μέσα στην εφαρμογή, πατήστε το.</li>
+    </ol>
+
+    <h2>2. Καρφίτσωμα οθόνης (Screen pinning)</h2>
+    <p class="note">Ενεργοποίηση μία φορά στις Ρυθμίσεις:</p>
+    <ol>
+      <li><strong>Ρυθμίσεις</strong> → αναζητήστε <strong>Καρφίτσωμα</strong> / <strong>Screen pinning</strong> / <strong>App pinning</strong>.</li>
+      <li>Ενεργοποιήστε το. Αν υπάρχει «Ζήτα ξεκλείδωμα πριν το ξεκαρφίτσωμα», ανοίξτε το.</li>
+    </ol>
+    <p class="note">Κάθε βάρδια / μετά από επανεκκίνηση:</p>
+    <ol>
+      <li>Ανοίξτε το παρουσιολόγιο από το εικονίδιο.</li>
+      <li>Ανοίξτε τις <strong>Πρόσφατες εφαρμογές</strong>.</li>
+      <li>Στο κάρτο της εφαρμογής → εικονίδιο εφαρμογής ή παρατεταμένο πάτημα → <strong>Καρφίτσωμα / Pin</strong>.</li>
+    </ol>
+    <p class="note">
+      Ξεκαρφίτσωμα (μόνο υπεύθυνος): συνήθως παρατεταμένο πάτημα <strong>Πίσω + Επισκόπηση</strong>, μετά PIN / μοτίβο.
+    </p>
+
+    <h2>3. Αν το pin δεν φτάνει</h2>
+    <table>
+      <thead>
+        <tr><th>Εργαλείο</th><th>Σημείωση</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Fully Kiosk Browser</strong></td>
+          <td>Start URL = η εφαρμογή· ενεργοποιήστε kiosk / lockdown.</td>
+        </tr>
+        <tr>
+          <td>MDM / Knox / Lock task</td>
+          <td>Εταιρική διαχείριση συσκευής — όχι από την ιστοσελίδα.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Γρήγορη λίστα</h2>
+    <ol>
+      <li>Εγκατάσταση από Chrome → εικονίδιο</li>
+      <li>Άνοιγμα από εικονίδιο</li>
+      <li>Καρφίτσωμα οθόνης</li>
+      <li>Προσωπικό: ΣΗΜΕΡΑ → πόστο → ΑΦΙΞΗ / ΑΠΟΧΩΡΗΣΗ</li>
+      <li>Ξεκαρφίτσωμα μόνο με PIN υπεύθυνου</li>
+    </ol>
+
+    <footer>
+      <p>
+        Εφαρμογές:
+        <a href="../tablet-demo/">STORE 311</a>
+        ·
+        <a href="../le-jardin/">Le Jardin</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

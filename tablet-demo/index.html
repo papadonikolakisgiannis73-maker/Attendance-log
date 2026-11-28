@@ -8,8 +8,10 @@
     />
     <meta name="theme-color" content="#f4f7f0" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Παρουσιολόγιο STORE 311" />
+    <meta name="format-detection" content="telephone=no" />
     <title>ΠΑΡΟΥΣΙΟΛΟΓΙΟ — STORE 311</title>
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="icon-192.png" type="image/png" />
@@ -47,6 +49,9 @@
           <button type="button" class="btn btn-ghost" id="btn-names">Ονόματα / PIN</button>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-install" hidden>
             Εγκατάσταση εφαρμογής
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-fullscreen" hidden>
+            Πλήρης οθόνη
           </button>
           <a class="home-help" href="../tutorial/?v=3" target="_blank" rel="noopener">Οδηγίες</a>
         </div>
@@ -170,6 +175,10 @@
           <button type="button" class="btn btn-ghost btn-sm" id="btn-change-pin">Αποθήκευση PIN</button>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-backup-raw">Αντίγραφο δεδομένων (JSON)</button>
           <p class="sheet-sub">Προεπιλογή PIN: 3111. Προαιρετικά κατεβάστε πλήρες JSON αντίγραφο (όλες οι ημέρες + ονόματα) για έξτρα ασφάλεια.</p>
+          <p class="kiosk-tip sheet-sub">
+            Κλείδωμα tablet (καρφίτσωμα οθόνης / kiosk): δεν γίνεται μόνο από την εφαρμογή —
+            <a href="../kiosk/" target="_blank" rel="noopener">οδηγίες Android</a>.
+          </p>
         </div>
         <div class="field-stack">
           <div>
